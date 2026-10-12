@@ -168,6 +168,20 @@ p { text-wrap: pretty; }
   background: var(--grad-accent);
 }
 
+/* Momento focal do site: o fio de regua desenha da esquerda para a
+   direita e so entao o rotulo aparece -- e assim que "Precisao que Cuida"
+   vira comportamento em vez de paleta. Fora do no-preference o fio
+   simplesmente existe, sem desenho. */
+@media (prefers-reduced-motion: no-preference) {
+  .eyebrow.reveal::before {
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 0.55s var(--ease);
+  }
+
+  .eyebrow.reveal.is-visible::before { transform: scaleX(1); }
+}
+
 .eyebrow--light { color: var(--teal-400); }
 
 .fine-print {
@@ -339,13 +353,17 @@ button:focus-visible,
   opacity: 0;
   transform: translateY(26px);
   transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
-  transition-delay: calc(var(--reveal-delay, 0) * 90ms);
+  transition-delay: calc(var(--reveal-delay, 0) * 70ms);
   will-change: opacity, transform;
 }
 
 .reveal.is-visible {
   opacity: 1;
   transform: none;
+  /* a animacao acabou: devolver a camada ao navegador. Com will-change
+     fixo, cada .reveal da pagina mantem uma camada de composicao viva
+     a vida inteira -- caro em celular. */
+  will-change: auto;
 }
 
 .reveal[data-delay="1"] { --reveal-delay: 1; }

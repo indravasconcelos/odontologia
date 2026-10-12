@@ -390,7 +390,7 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   flex-direction: column;
   align-items: flex-start;
   gap: 0.1rem;
-  animation: floatY 6.5s ease-in-out infinite;
+  animation: floatY 7s ease-in-out infinite;
 }
 
 .hero-card--cro {
@@ -402,7 +402,7 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   /* o CRO e uma leitura: numero alinhado, nao texto decorativo */
   font-variant-numeric: tabular-nums;
   color: var(--teal-300);
-  animation: floatY 7.5s ease-in-out 0.8s infinite;
+  animation: floatY 7s ease-in-out -2.33s infinite;
 }
 
 .hero-card--insta {
@@ -410,7 +410,7 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   bottom: 7%;
   color: var(--on-dark-soft);
   text-decoration: none;
-  animation: floatY 7s ease-in-out 1.6s infinite;
+  animation: floatY 7s ease-in-out -4.66s infinite;
 }
 
 .hero-card--insta:hover,
@@ -1526,6 +1526,12 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   flex: 0 0 390px;
   margin: 0 var(--dep-gap) 0 0;
 }
+
+/* Os loops decorativos do hero param quando ele sai da tela:
+   animação fora do campo de visão é render gasto à toa. */
+.hero.is-off .hero-blob,
+.hero.is-off .hero-ring,
+.hero.is-off .hero-card { animation-play-state: paused; }
 
 @keyframes dep-marquee {
   from { transform: translate3d(0, 0, 0); }

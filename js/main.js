@@ -514,6 +514,20 @@
     }
   }
 
+  /* O hero tem três loops decorativos permanentes (blob, anel e as fichas
+     flutuantes). Animação fora da tela é render gasto à toa, então eles
+     param quando o hero sai do campo de visão. */
+  var heroBox = document.querySelector('.hero');
+  if (heroBox && 'IntersectionObserver' in window) {
+    var heroObserver = new IntersectionObserver(function (entradas) {
+      entradas.forEach(function (entrada) {
+        heroBox.classList.toggle('is-off', !entrada.isIntersecting);
+      });
+    }, { threshold: 0 });
+
+    heroObserver.observe(heroBox);
+  }
+
   /* ---------------- Mapa 3D (satélite inclinado) ----------------
      A biblioteca só é carregada quando a localização se aproxima da
      tela; se algo falhar, o mapa volta para o iframe do Google. */
