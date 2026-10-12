@@ -49,7 +49,21 @@
           "oklch(95% 0.04 180)"
         ]
       },
-      "blue-500": {
+      "teal-700": {
+        "role": "primary",
+        "displayName": "Turquesa Afericao",
+        "canonical": "#0a6f62",
+        "tonalRamp": [
+          "oklch(15% 0.025 178)",
+          "oklch(25% 0.045 178)",
+          "oklch(34% 0.058 178)",
+          "oklch(43% 0.066 178)",
+          "oklch(55% 0.07 178)",
+          "oklch(68% 0.065 178)",
+          "oklch(82% 0.045 178)",
+          "oklch(94% 0.022 178)"
+        ]
+      },      "blue-500": {
         "role": "secondary",
         "displayName": "Azul Aferição",
         "canonical": "#2e7be8",
@@ -109,7 +123,21 @@
           "oklch(95% 0.01 250)"
         ]
       },
-      "surface": {
+      "ink-400": {
+        "role": "neutral",
+        "displayName": "Tinta Leve",
+        "canonical": "#55677a",
+        "tonalRamp": [
+          "oklch(15% 0.014 245)",
+          "oklch(26% 0.024 245)",
+          "oklch(37% 0.032 245)",
+          "oklch(49% 0.036 245)",
+          "oklch(62% 0.035 245)",
+          "oklch(74% 0.03 245)",
+          "oklch(86% 0.02 245)",
+          "oklch(95% 0.01 245)"
+        ]
+      },      "surface": {
         "role": "neutral",
         "displayName": "Papel",
         "canonical": "#ffffff",
@@ -341,6 +369,10 @@
     ],
     "rules": [
       {
+        "name": "The Measured Number Rule",
+        "body": "Anything the practice can be measured by — the CRO number, the 01/02/03 step scale, the CEP and phone in the contact block — is set with font-variant-numeric: tabular-nums, so digits align as readings on a scale. This is where the north star becomes observable behaviour rather than palette. It is a real font feature, never a monospace costume: no third family is introduced to fake it. Body and button text stay on the default normal figures.",
+        "section": "typography"
+      },      {
         "name": "The One Gauge Rule",
         "body": "Turquesa Vivo appears on at most one element per viewport — one primary button, one eyebrow, one focus ring. Its rarity is what makes it read as a signal instead of decoration. When a second teal element would compete, the second one goes navy or white.",
         "section": "colors"

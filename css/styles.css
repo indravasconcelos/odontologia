@@ -86,7 +86,9 @@
 
 .brand-text small {
   font-size: 0.73rem;
-  letter-spacing: 0.05em;
+  /* tracking largo so faz sentido em caixa alta; aqui quebra o agrupamento
+     de caracteres do subtitulo e desacelera a leitura */
+  letter-spacing: 0.01em;
   color: rgba(255, 255, 255, 0.72);
   transition: color 0.3s var(--ease);
   white-space: nowrap;
@@ -397,6 +399,8 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   font-family: var(--font-display);
   font-weight: 700;
   letter-spacing: 0.08em;
+  /* o CRO e uma leitura: numero alinhado, nao texto decorativo */
+  font-variant-numeric: tabular-nums;
   color: var(--teal-300);
   animation: floatY 7.5s ease-in-out 0.8s infinite;
 }
@@ -711,6 +715,8 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   font-size: 2.6rem;
   font-weight: 800;
   line-height: 1;
+  /* algarismos de largura fixa: a escala 01-02-03 alinha como numa regua */
+  font-variant-numeric: tabular-nums;
   color: rgba(255, 255, 255, 0.09);
   transition: color 0.4s var(--ease);
 }
@@ -1761,6 +1767,7 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   align-items: flex-start;
 }
 
+.contact-list { font-variant-numeric: tabular-nums; }
 .contact-icon {
   display: grid;
   place-items: center;
@@ -2207,7 +2214,7 @@ body.lightbox-open { overflow: hidden; }
 /* --- Mobile grande --- */
 @media (max-width: 720px) {
   .brand-text strong { font-size: 0.92rem; }
-  .brand-text small { font-size: 0.66rem; }
+  .brand-text small { font-size: 0.75rem; }
   .brand-mark { width: 44px; height: 44px; font-size: 0.92rem; }
 
   .steps { grid-template-columns: 1fr; }

@@ -18,6 +18,9 @@
   --teal-400: #3ee6d6;
   --teal-500: #14d6c4;
   --teal-600: #0fbba9;
+  /* teal escuro: unico teal aprovado para TEXTO sobre fundo claro
+     (#0fbba9 da 2.4:1 e reprova WCAG AA) */
+  --teal-700: #0a6f62;
   --blue-500: #2e7be8;
 
   /* Neutros claros */
@@ -25,7 +28,7 @@
   --ink-800: #16283a;
   --ink-600: #44566b;
   --ink-500: #5a6b7d;
-  --ink-400: #7a8ca0;
+  --ink-400: #55677a;
   --surface: #ffffff;
   --surface-alt: #f4f8fb;
   --surface-soft: #eef4f9;
@@ -133,7 +136,7 @@ h1, h2, h3, h4 {
 
 h1 { font-size: clamp(2.3rem, 5.2vw, 3.9rem); font-weight: 800; letter-spacing: -0.03em; }
 h2 { font-size: clamp(1.75rem, 3.4vw, 2.7rem); letter-spacing: -0.025em; }
-h3 { font-size: clamp(1.12rem, 1.7vw, 1.3rem); }
+h3 { font-size: clamp(1.12rem, 1.7vw, 1.3rem); line-height: 1.28; }
 
 p { text-wrap: pretty; }
 
@@ -153,7 +156,7 @@ p { text-wrap: pretty; }
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--teal-600);
+  color: var(--teal-700);
   margin-bottom: 1rem;
 }
 

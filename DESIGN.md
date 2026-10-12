@@ -12,12 +12,13 @@ colors:
   teal-400: "#3ee6d6"
   teal-500: "#14d6c4"
   teal-600: "#0fbba9"
+  teal-700: "#0a6f62"
   blue-500: "#2e7be8"
   ink-900: "#0b1b2b"
   ink-800: "#16283a"
   ink-600: "#44566b"
   ink-500: "#5a6b7d"
-  ink-400: "#7a8ca0"
+  ink-400: "#55677a"
   surface: "#ffffff"
   surface-alt: "#f4f8fb"
   surface-soft: "#eef4f9"
@@ -163,7 +164,8 @@ A two-accent system over a deep navy base, with a cool neutral ramp for all read
 ### Primary
 - **Turquesa Vivo** (`#14d6c4`): the single action colour. Buttons, focus rings, eyebrow bars, the animated highlight sweep. It is the only saturated colour a visitor sees at rest.
 - **Turquesa Claro** (`#7ff0e5`): eyebrow label on dark grounds, where the full-strength teal would vibrate against navy.
-- **Turquesa Profundo** (`#0fbba9`): the mid-stop inside the primary button gradient, and the light-ground eyebrow colour.
+- **Turquesa Profundo** (`#0fbba9`): the mid-stop inside the primary button gradient. Never used for text — it fails contrast on every light ground.
+- **Turquesa Aferição** (`#0a6f62`): the only teal approved for **text on a light ground** (6.06:1 on white, 5.68:1 on `--surface-alt`). Carries the eyebrow label and any teal that must be read.
 
 ### Secondary
 - **Azul Aferição** (`#2e7be8`): the partner stop that closes the accent gradient and carries the cool half of the dark backgrounds. Never used alone as a call to action.
@@ -174,7 +176,7 @@ A two-accent system over a deep navy base, with a cool neutral ramp for all read
 - **Azul Intermediário** (`#0a2540`): the neutral button fill (`--btn-bg` default) and any dark-on-dark surface.
 - **Tinta** (`#0b1b2b`): all headings on light grounds. Near-black, never `#000`.
 - **Tinta Corpo** (`#44566b`): body copy on light grounds. Deliberately desaturated so long passages stay calm.
-- **Tinta Suave** (`#5a6b7d`): lead paragraphs. **Tinta Leve** (`#7a8ca0`): fine print only.
+- **Tinta Suave** (`#5a6b7d`): lead paragraphs. **Tinta Leve** (`#55677a`): fine print and the scrolled header subtitle (5.82:1 on white).
 - **Papel** (`#ffffff`): the base plane. **Papel Quieto** (`#f4f8fb`): alternating section fill. **Papel Suave** (`#eef4f9`): nested surfaces inside a quiet section.
 - **Sobre Escuro** (`#eaf2f8`), **Sobre Escuro Suave** (`#b9c9d9`), **Sobre Escuro Apagado** (`#8ba2b8`): the three-step text ramp on navy.
 - **Linha** (`rgba(7, 27, 51, 0.09)`) and **Linha Forte** (`rgba(7, 27, 51, 0.16)`): borders. Hairlines only; never a solid 1px grey.
@@ -208,6 +210,8 @@ A two-accent system over a deep navy base, with a cool neutral ramp for all read
 **The Em Gradient Rule.** The emphasised fragment inside a headline (always one `em` per headline, never two) is the only place a gradient is applied to text. It is the reading entry point of the section.
 
 **The Balanced Line Rule.** Every headline carries `text-wrap: balance` and every paragraph carries `text-wrap: pretty`. A headline that breaks on a single trailing word is a bug, not a style.
+
+**The Measured Number Rule.** Anything the practice can be *measured* by — the CRO number, the `01/02/03` step scale, the CEP and phone in the contact block — is set with `font-variant-numeric: tabular-nums`, so digits align as readings on a scale. This is the one place the "Precisão que Cuida" north star becomes observable behaviour rather than palette. It is a real font feature, never a monospace costume: no third family is introduced to fake it. Body and button text stay on the default `normal` figures.
 
 ## Layout
 
