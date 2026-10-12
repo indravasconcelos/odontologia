@@ -1,0 +1,20 @@
+# ===================================================================
+#  logs/ - arquivos internos do sistema
+#  Esta pasta NUNCA deve ser acessada pela web.
+#  Ainda assim, o bloqueio e repetido aqui para proteger mesmo que
+#  a pasta seja movida ou o .htaccess da raiz falhe.
+# ===================================================================
+
+# Apache 2.4 (Hostinger / LiteSpeed)
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+
+# Apache 2.2 (fallback)
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
+
+# Nunca lista o conteudo
+Options -Indexes

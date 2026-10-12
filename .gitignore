@@ -1,0 +1,38 @@
+# Sistema de agenda e assistente — Credenciais ignoradas pelo Git
+.env
+.env.local
+.env.*.local
+
+# Ambiente de demonstracao (servidor portatil)
+_demo/
+!_demo/.gitkeep
+_demo/logs/
+_demo/dados/
+_demo/php/
+_demo/mysql/
+
+# Registros internos e copias do banco: nunca vao para o Git
+# (contem dados pessoais de pacientes)
+logs/*
+!logs/.htaccess
+!logs/.gitkeep
+backups/*
+!backups/.htaccess
+!backups/.gitkeep
+database/.instalado
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/
+.idea/
+*.swp
+
+# Logs e temporarios
+*.log
+*.tmp
+*.bak
+*.cache

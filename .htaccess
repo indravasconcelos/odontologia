@@ -1,0 +1,76 @@
+# ==============================================================
+#  PROTEÇÃO — compativel com Apache e LiteSpeed (Hostinger)
+# ==============================================================
+
+# ---------- 1. Nao listar o conteudo das pastas ----------
+# Dentro do IfModule: se a hospedagem nao permitir "AllowOverride Options",
+# essa diretiva fora do bloco derrubaria o site inteiro com erro 500.
+<IfModule mod_autoindex.c>
+  Options -Indexes
+</IfModule>
+
+# ---------- 2. Arquivos sensiveis nunca sao servidos ----------
+<FilesMatch "^\.env">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+<FilesMatch "\.(sql|log|ini|bak|sh|bat|md)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# ---------- 3. Pastas internas do sistema ----------
+# app/      classes do sistema (nada de HTML aqui)
+# database/ SQL e instalador
+# logs/     registros do assistente e e-mails que falharam
+# backups/  copias do banco, com dados pessoais
+# _demo/    servidor portatil, so na sua maquina
+RedirectMatch 404 ^/(app|config|database|logs|backups|_demo)(/|$)
+
+# ---------- 4. Cabecalho de seguranca ----------
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+</IfModule>
+
+# ---------- 5. Paginas de erro ----------
+ErrorDocument 404 /index.html
+
+# ---------- 6. Compressao ----------
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml application/javascript application/json image/svg+xml
+</IfModule>
+
+# ---------- 7. Cache dos arquivos estaticos ----------
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType application/javascript "access plus 7 days"
+  ExpiresByType image/jpeg "access plus 30 days"
+  ExpiresByType image/png "access plus 30 days"
+  ExpiresByType image/svg+xml "access plus 30 days"
+  ExpiresByType video/mp4 "access plus 30 days"
+</IfModule>
+
+# ---------- 8. HTTPS ----------
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # forca HTTPS quando o certificado ja estiver ativo
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>

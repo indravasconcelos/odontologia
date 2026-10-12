@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="675" viewBox="0 0 900 675" role="img" aria-label="Imagem em breve">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0A2540"/>
+      <stop offset="1" stop-color="#050F1E"/>
+    </linearGradient>
+    <linearGradient id="line" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#14D6C4"/>
+      <stop offset="1" stop-color="#2E7BE8"/>
+    </linearGradient>
+    <pattern id="grid" width="45" height="45" patternUnits="userSpaceOnUse">
+      <path d="M45 0H0V45" fill="none" stroke="#14D6C4" stroke-opacity=".07"/>
+    </pattern>
+  </defs>
+  <rect width="900" height="675" fill="url(#bg)"/>
+  <rect width="900" height="675" fill="url(#grid)"/>
+  <circle cx="760" cy="90" r="170" fill="#14D6C4" opacity=".07"/>
+  <circle cx="120" cy="600" r="200" fill="#2E7BE8" opacity=".08"/>
+  <g transform="translate(450 292)" fill="none" stroke="url(#line)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="-78" y="-56" width="156" height="118" rx="18"/>
+    <path d="M-30 -56l14-24h32l14 24"/>
+    <circle cx="0" cy="6" r="34"/>
+  </g>
+  <text x="450" y="420" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="600" fill="#E8F6F4" letter-spacing="2">IMAGEM EM BREVE</text>
+  <text x="450" y="462" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="21" fill="#7FA3B8" letter-spacing="1">adicione o arquivo na pasta assets/</text>
+  <rect x="330" y="500" width="240" height="4" rx="2" fill="url(#line)" opacity=".7"/>
+</svg>
