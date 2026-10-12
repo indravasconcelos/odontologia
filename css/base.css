@@ -281,6 +281,16 @@ p { text-wrap: pretty; }
 .btn:hover::after { left: 120%; }
 .btn:active { transform: translateY(0); }
 
+/* "Tatil e firme": ao apertar, o botao afunda de verdade e o halo recolhe.
+   O encolhimento e espacial, entao fica de fora quando o movimento e
+   reduzido -- mas o halo continua, porque ele confirma o toque. */
+.btn-primary:active { box-shadow: 0 6px 16px rgba(20, 214, 196, 0.28); }
+.btn-light:active { box-shadow: 0 8px 20px rgba(4, 16, 31, 0.32); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .btn:active { transform: translateY(0) scale(0.985); }
+}
+
 .btn:focus-visible,
 a:focus-visible,
 button:focus-visible,

@@ -127,17 +127,20 @@
   content: "";
   position: absolute;
   left: 50%;
-  bottom: 0.28rem;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
+  bottom: 0.22rem;
+  /* marca de escala, nao um ponto: cresce de baixo para cima como um
+     cursor de leitura percorrendo as secoes */
+  width: 2px;
+  height: 13px;
+  border-radius: 2px;
   background: var(--teal-500);
-  transform: translateX(-50%) scale(0);
-  transition: transform 0.3s var(--ease);
+  transform: translateX(-50%) scaleY(0);
+  transform-origin: center bottom;
+  transition: transform 0.34s var(--ease);
 }
 
 .nav-list a:hover { color: #fff; background: rgba(255, 255, 255, 0.09); }
-.nav-list a.is-active::after { transform: translateX(-50%) scale(1); }
+.nav-list a.is-active::after { transform: translateX(-50%) scaleY(1); }
 
 .site-header.is-scrolled .nav-list a { color: var(--ink-600); }
 .site-header.is-scrolled .nav-list a:hover { color: var(--navy-900); background: rgba(7, 27, 51, 0.06); }
