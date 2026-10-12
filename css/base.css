@@ -67,7 +67,7 @@
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --dur: 0.55s;
 
-  --header-h: 78px;
+  --header-h: calc(78px + env(safe-area-inset-top, 0px));
 }
 
 /* ---------- Reset ---------- */

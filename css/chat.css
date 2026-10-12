@@ -9,7 +9,8 @@
 .chat-fab {
   position: fixed;
   right: clamp(1rem, 3vw, 1.75rem);
-  bottom: clamp(1rem, 3vw, 1.75rem);
+  /* soma a area segura: o botao nao pode cair em cima da barra de gesto */
+  bottom: calc(clamp(1rem, 3vw, 1.75rem) + env(safe-area-inset-bottom, 0px));
   z-index: 250;
   display: inline-flex;
   align-items: center;

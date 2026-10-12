@@ -9,6 +9,8 @@
   inset: 0 0 auto;
   z-index: 100;
   padding-block: 0.9rem;
+  /* com viewport-fit=cover, o header precisa sair de baixo do notch */
+  padding-top: calc(0.9rem + env(safe-area-inset-top, 0px));
   transition: background-color 0.4s var(--ease), box-shadow 0.4s var(--ease),
               padding 0.4s var(--ease), backdrop-filter 0.4s var(--ease);
 }
@@ -901,6 +903,12 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
 }
 
 .trat-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 44px e o piso de alvo de toque: vale em todas as larguras,
+     em vez de depender do padding de cada breakpoint */
+  min-height: 44px;
   font-family: var(--font-display);
   font-size: 0.86rem;
   font-weight: 600;
@@ -1365,21 +1373,39 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
 .cases-dots {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0;
 }
 
+/* O ponto visivel continua pequeno (8px, como sempre foi); a area de
+   toque e de 44x44, o minimo para o dedo. O desenho foi para o ::before
+   justamente para nao aumentar o tamanho ocupado na linha. */
 .cases-dot {
-  width: 8px;
-  height: 8px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 0;
   border-radius: 999px;
-  background: rgba(7, 27, 51, 0.2);
+  background: transparent;
   cursor: pointer;
+}
+
+.cases-dot::before {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(7, 27, 51, 0.2);
   transition: width 0.35s var(--ease), background 0.35s var(--ease);
 }
 
-.cases-dot.is-active {
+.cases-dot:hover::before { background: rgba(20, 214, 196, 0.6); }
+
+.cases-dot:focus-visible { border-radius: 999px; }
+
+.cases-dot.is-active::before {
   width: 26px;
   background: var(--grad-accent);
 }
@@ -1500,11 +1526,16 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   to { transform: translate3d(-50%, 0, 0); }
 }
 
-/* lê com calma: hover, toque ou foco freiam a fita */
-.dep-carousel:hover .dep-track,
+/* lê com calma: toque ou foco freiam a fita */
 .dep-carousel:focus-within .dep-track,
 .dep-carousel:active .dep-track,
 .dep-track.is-off { animation-play-state: paused; }
+
+/* hover só quando existe cursor de verdade. No celular o :hover gruda
+   depois do toque e a fita ficaria parada para sempre. */
+@media (hover: hover) {
+  .dep-carousel:hover .dep-track { animation-play-state: paused; }
+}
 
 /* sem movimento: a fita vira pista rolável, para ninguém perder cards */
 @media (prefers-reduced-motion: reduce) {
@@ -1887,6 +1918,9 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
+/* o rodape precisa ficar acima da barra de gesto do iPhone */
+.site-footer { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
 .footer-grid {
   display: grid;
   grid-template-columns: 1.5fr 1fr 1fr 1.2fr;
@@ -1908,6 +1942,7 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
+  min-height: 44px;
   font-weight: 600;
   font-size: 0.92rem;
   color: var(--teal-400);
@@ -2105,7 +2140,7 @@ body.lightbox-open { overflow: hidden; }
 
 /* --- Tablet --- */
 @media (max-width: 920px) {
-  :root { --header-h: 68px; }
+  :root { --header-h: calc(68px + env(safe-area-inset-top, 0px)); }
 
   /* Hero */
   .container.hero-grid {
@@ -2173,7 +2208,7 @@ body.lightbox-open { overflow: hidden; }
 @media (max-width: 720px) {
   .brand-text strong { font-size: 0.92rem; }
   .brand-text small { font-size: 0.66rem; }
-  .brand-mark { width: 42px; height: 42px; font-size: 0.92rem; }
+  .brand-mark { width: 44px; height: 44px; font-size: 0.92rem; }
 
   .steps { grid-template-columns: 1fr; }
   .proc-grid { grid-template-columns: 1fr; }
@@ -2192,6 +2227,15 @@ body.lightbox-open { overflow: hidden; }
   .dep-track > .dep-card { flex-basis: clamp(260px, 82vw, 340px); }
 
   .cases-track { grid-auto-columns: 76%; gap: 1rem; }
+
+  /* Os 5 pontos de 44px nao cabem ao lado das setas em 320px.
+     As setas ficam numa linha e os pontos ganham a linha inteira
+     (5 x 44 = 220px, sobra folgada mesmo no menor celular). */
+  .cases-controls { flex-wrap: wrap; gap: 0.35rem; }
+
+  .cases-dots { flex: 1 0 100%; justify-content: center; }
+
+  .fine-print { font-size: 0.9rem; }
 
   .footer-grid { grid-template-columns: 1fr; gap: 2.2rem; }
 
