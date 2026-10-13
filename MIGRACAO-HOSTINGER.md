@@ -4,15 +4,14 @@ O sistema foi feito com PHP e MySQL comuns, sem nada específico de
 servidor local. Publicar na Hostinger é só enviar arquivos, criar o
 banco e configurar o `.env`.
 
-> **Resumo em 6 passos**
+> **Resumo em 5 passos**
 > 1. Enviar os arquivos (sem `_demo/`)
 > 2. Criar banco e usuário no hPanel
 > 3. Criar o `.env` no servidor
 > 4. Terminal: `php database/instalar.php`
-> 5. Terminal: `php database/seed-demo.php` *(só na demonstração)*
-> 6. Trocar senha → remover `INSTALAR_TOKEN` → apagar `instalar.php` → SSL
+> 5. Trocar senha → remover `INSTALAR_TOKEN` → apagar `instalar.php` → SSL
 >
-> Os passos 4 e 5 **exigem o Terminal** do hPanel (Avançado → Terminal).
+> O passo 4 **exige o Terminal** do hPanel (Avançado → Terminal).
 > O instalador é bloqueado pela web de propósito.
 
 ---
@@ -112,21 +111,11 @@ o administrador com os valores de `ADMIN_*` do `.env`.
 com um 404 de propósito, justamente para ninguém rodar o instalador
 pela internet. É uma proteção, não um defeito.
 
-### 3.4 Encher a agenda de demonstração
+### 3.4 Encher a agenda
 
-Ainda no Terminal:
-
-```
-php database/seed-demo.php
-```
-
-Cria **6 pacientes fictícios** (nomes e telefones inventados) e **10
-agendamentos** distribuídos a partir de hoje. É o que faz a agenda
-aparecer preenchida quando alguém abre o painel.
-
-> **Só rode na demonstração.** Antes de usar de verdade, limpe com
-> `php database/zerar-demo.php` — ele apaga os pacientes e agendamentos
-> de exemplo e mantém os serviços, os horários e o seu usuário.
+Crie os serviços, os horários e os primeiros pacientes pelo painel em
+`/admin`. É o que faz a agenda aparecer preenchida quando alguém abre
+o painel.
 
 Depois de instalar:
 
@@ -242,17 +231,17 @@ no topo do painel, ainda não está pronto.**
 - [ ] Agendamento de teste criado pelo chat e visto no painel
 - [ ] Primeiro backup feito e baixado
 
-### Só na demonstração — antes de publicar de verdade
+### Antes de publicar de verdade
 
-Estes itens são **do site que o cliente vai usar**, não da demonstração:
+Itens que precisam estar resolvidos antes do site ir para o ar:
 
 - [ ] Depoimentos de exemplo substituídos por depoimentos reais
-- [ ] Agenda de demonstração limpa (`php database/zerar-demo.php`)
+- [ ] Agenda limpa: pacientes e agendamentos de teste apagados pelo painel
 - [ ] Telefone e endereço reais conferidos no site
 
 Os depoimentos hoje são marcados como "Depoimento modelo 01" e "Paciente
-demonstrativo". Isso é intencional na demonstração — evita que o cliente
-acredite que foram pacientes reais — mas **não pode ir para o ar**.
+demonstrativo". Isso evita que o cliente acredite que foram pacientes
+reais, mas **não pode ir para o ar**.
 
 ---
 
@@ -279,14 +268,9 @@ public_html/
 
 **Trocar a senha do administrador:** `/admin` → Minha conta.
 
-**Zerar a agenda antes de usar de verdade:**
-
-```
-php database/zerar-demo.php
-```
-
-Isso apaga pacientes, agendamentos e bloqueios de demonstração, mas
-mantém serviços, horários e o usuário administrador.
+**Limpar a agenda antes de usar de verdade:** apague os pacientes, os
+agendamentos e os bloqueios de teste pelo próprio painel, em `/admin`.
+Serviços, horários e o usuário administrador permanecem.
 
 **Atualizar os horários de atendimento:** `/admin` → Horários. É a fonte
 da verdade usada pela assistente.

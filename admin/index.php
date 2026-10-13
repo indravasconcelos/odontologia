@@ -19,17 +19,18 @@ $ontem = date('Y-m-d', strtotime('-1 day', strtotime($data)));
 
 $flash = Session::pegaFlash();
 
-// cancelar um agendamento
-$cancelar = (int) Helpers::e('cancelar', 0);
-if ($cancelar > 0) {
+// "Excluir" da agenda: o agendamento sai do dia, mas o registro fica
+// no banco com status cancelado, para não perder o histórico.
+$excluir = (int) Helpers::e('excluir', 0);
+if ($excluir > 0) {
     Helpers::exigirCsrf();
 
-    $resultado = Agenda::cancelar($cancelar);
+    $resultado = Agenda::cancelar($excluir);
 
     if ($resultado['ok']) {
-        Session::flash('Agendamento cancelado.', 'ok');
+        Session::flash('Agendamento excluído da agenda. O histórico foi mantido.', 'ok');
     } else {
-        Session::flash($resultado['erro'] ?? 'Não foi possível cancelar.', 'erro');
+        Session::flash($resultado['erro'] ?? 'Não foi possível excluir.', 'erro');
     }
 
     Helpers::redirecionar(Helpers::baseUrl() . '/admin/?data=' . urlencode($data));
@@ -111,6 +112,7 @@ if ($agendamentos === []) {
     foreach ($agendamentos as $a) {
         $idAg = (int) $a['id'];
         $classeStatus = match ($a['status']) {
+            'pendente'   => 'is-pendente',
             'confirmado' => 'is-confirmado',
             'cancelado'  => 'is-cancelado',
             'concluido'  => 'is-concluido',
@@ -123,26 +125,62 @@ if ($agendamentos === []) {
         echo '  <td><a href="pacientes.php?id=' . (int) $a['paciente_id'] . '">' . Helpers::escapar($a['paciente_nome']) . '</a>'
            . ($a['paciente_telefone'] ? '<span class="adm-sub">' . Helpers::escapar($a['paciente_telefone']) . '</span>' : '') . '</td>';
         echo '  <td>' . Helpers::escapar($a['servico_nome']) . '<span class="adm-sub">' . (int) $a['duracao_minutos'] . ' min</span></td>';
-        echo '  <td><span class="adm-status ' . $classeStatus . '">' . Helpers::escapar(ucfirst($a['status'])) . '</span></td>';
+        // Pendente ainda não tem nome na agenda: o Dr. vê o horário
+        // reservado e decide se confirma. Só depois vira "Confirmado".
+        $rotuloStatus = $a['status'] === 'pendente' ? '—' : ucfirst((string) $a['status']);
+        echo '  <td><span class="adm-status ' . $classeStatus . '">' . Helpers::escapar($rotuloStatus) . '</span></td>';
         echo '  <td><span class="adm-origem">' . Helpers::escapar($a['origem']) . '</span></td>';
         echo '  <td class="adm-col-acoes">';
 
         if ($a['status'] !== 'cancelado') {
-            echo '<a class="adm-acao" href="agendamento.php?id=' . $idAg . '">Remarcar</a>';
+            // Só abre o WhatsApp com a mensagem pronta — o Dr. Maycon envia
+            // e o paciente responde. Nada aqui mexe no status da consulta.
+            $mensagemWpp = 'Olá, ' . $a['paciente_nome'] . "! 😊\n\n"
+                . 'Lembrete da sua consulta no consultório do Dr. Maycon Gomes:\n'
+                . '📅 ' . Helpers::dataExtenso((string) $a['data']) . "\n"
+                . '🕐 ' . Helpers::horaBr((string) $a['hora_inicio']) . "\n\n"
+                . 'Você confirma a presença? Se precisar remarcar, é só me dizer por aqui mesmo.\n\n'
+                . 'Obrigado!';
 
-            if ($a['status'] !== 'concluido') {
+            $linkWpp = Helpers::whatsappLink(
+                $a['paciente_telefone'] !== null ? (string) $a['paciente_telefone'] : '',
+                $mensagemWpp
+            );
+
+            if ($linkWpp !== null) {
+                echo '<a class="adm-acao adm-acao--wpp" href="' . Helpers::escapar($linkWpp) . '"'
+                   . ' target="_blank" rel="noopener noreferrer"'
+                   . ' title="Abre o WhatsApp com a mensagem pronta. A confirmação só conta quando o paciente responder.">'
+                   . 'Confirmar pelo WhatsApp</a>';
+            } else {
+                echo '<span class="adm-acao adm-acao--inativo"'
+                   . ' title="Sem telefone válido no cadastro deste paciente. Abra a ficha dele para corrigir.">'
+                   . 'Confirmar pelo WhatsApp</span>';
+            }
+
+            // O Dr. confirma depois de ouvir o paciente (WhatsApp, telefone,
+            // na recepção). Só aparece enquanto a ida ainda não foi confirmada.
+            if ($a['status'] === 'pendente') {
                 echo '<form method="post" class="adm-inline">'
                    . '<input type="hidden" name="csrf" value="' . Helpers::escapar($csrf) . '">'
                    . '<input type="hidden" name="id" value="' . $idAg . '">'
-                   . '<input type="hidden" name="status" value="concluido">'
-                   . '<button class="adm-acao adm-acao--ok" type="submit" title="Marcar como atendido">Atendido</button>'
+                   . '<input type="hidden" name="status" value="confirmado">'
+                   . '<button class="adm-acao adm-acao--confirmar" type="submit"'
+                   . ' title="Marca a ida do paciente como confirmada.">Confirmado</button>'
                    . '</form>';
             }
 
-            echo '<form method="post" class="adm-inline" onsubmit="return confirm(\'Cancelar este agendamento?\')">'
+            echo '<form method="post" class="adm-inline">'
                . '<input type="hidden" name="csrf" value="' . Helpers::escapar($csrf) . '">'
-               . '<input type="hidden" name="cancelar" value="' . $idAg . '">'
-               . '<button class="adm-acao adm-acao--perigo" type="submit">Cancelar</button>'
+               . '<input type="hidden" name="id" value="' . $idAg . '">'
+               . '<input type="hidden" name="status" value="concluido">'
+               . '<button class="adm-acao adm-acao--ok" type="submit" title="Marcar como atendido">Atendido</button>'
+               . '</form>';
+
+            echo '<form method="post" class="adm-inline" onsubmit="return confirm(\'Excluir da agenda? O registro fica no histórico como cancelado.\')">'
+               . '<input type="hidden" name="csrf" value="' . Helpers::escapar($csrf) . '">'
+               . '<input type="hidden" name="excluir" value="' . $idAg . '">'
+               . '<button class="adm-acao adm-acao--perigo" type="submit">Excluir</button>'
                . '</form>';
         }
 

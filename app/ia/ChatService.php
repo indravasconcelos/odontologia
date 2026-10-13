@@ -97,17 +97,6 @@ final class ChatService
         return $modo;
     }
 
-    /** primeira mensagem, ja com a pergunta de abertura */
-    public static function saudacaoInicial(): string
-    {
-        $dias = Knowledge::textoDias();
-        $extra = $dias !== '' ? ' O atendimento é ' . mb_strtolower($dias) . '.' : '';
-
-        return 'Olá 😊 Eu sou a assistente do consultório do Dr. Maycon Gomes.'
-            . $extra
-            . ' Ainda fica alguma dúvida, ou você quer marcar uma avaliação?';
-    }
-
     // ---------------- estado e historico ----------------
 
     private static function estado(): array

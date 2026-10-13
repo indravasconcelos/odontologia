@@ -250,6 +250,22 @@ final class Knowledge
         return $melhor;
     }
 
+    /**
+     * Entrada do FAQ por uma de suas chaves. Usado quando o contexto da
+     * frase troca a resposta (crianca, idade) e nao quando bate uma
+     * palavra solta — para isso existe faqPorTexto.
+     */
+    public static function faqPorChave(string $chave): ?array
+    {
+        foreach (self::faq() as $f) {
+            if (in_array($chave, (array) $f['chaves'], true)) {
+                return $f;
+            }
+        }
+
+        return null;
+    }
+
     /** texto de sistema para a IA, sem precios e sem promessas */
     public static function paraIa(): string
     {

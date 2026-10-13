@@ -46,37 +46,147 @@ final class Fallback
                 . 'o WhatsApp é ' . Knowledge::TELEFONE . '. Prefere me contar o que precisa?'];
         }
 
-        // Se a conversa estava no meio de um fluxo e a pessoa mudou de
-        // assunto para uma duvida, responde a duvida e recomeça.
-        // O cancelamento entra aqui tambem: sem isso, uma pergunta no
-        // meio da conversa seria lida como nome e apagaria a consulta.
+        // O paciente pode perguntar qualquer coisa a qualquer momento,
+        // inclusive no meio do agendamento. Respondemos a dúvida, mas
+        // NÃO zeramos o estado: apagar nome e dia por causa de uma
+        // pergunta honesta obrigava o paciente a começar tudo de novo.
+        $etapaAntes = (string) ($estado['etapa'] ?? 'inicio');
         $esperando = ['aguardando_nome', 'aguardando_dia', 'aguardando_hora', 'aguardando_confirmacao',
             'aguardando_nome_cancelamento', 'confirmar_cancelamento'];
-        if (in_array($estado['etapa'] ?? 'inicio', $esperando, true)
+
+        // Uma pergunta de verdade no meio do fluxo também conta, mesmo
+        // sem palavra-chave: responder "não encontrei esse horário" para
+        // "você faz cirurgia plástica?" seria ignorar o que a pessoa
+        // perguntou. O cabeNoFluxo já protege as respostas legítimas
+        // ("sexta?", "09:30?", "sim?").
+        $ehPergunta = str_contains($texto, '?');
+
+        $duvidaNoMeio = in_array($etapaAntes, $esperando, true)
             && !self::cabeNoFluxo($texto, $norm, $estado)
-            && self::ehDuvidaDeConhecimento($norm)) {
-            $estado = array_merge(Fallback::estadoInicial(), ['turnos' => (int) $estado['turnos']]);
+            && (self::ehDuvidaDeConhecimento($norm) || $ehPergunta);
+
+        // etapas que esperam uma resposta especifica. Se a pessoa
+        // perguntou uma duvida, elas ficam de fora: "quanto custa
+        // clareamento?" no meio do agendamento e uma pergunta de
+        // verdade, e o switch de "dia" responderia "não entendi o dia".
+        if (!$duvidaNoMeio) {
+            switch ($etapaAntes) {
+                case 'aguardando_nome':
+                    return self::receberNome($texto, $norm, $estado);
+                case 'aguardando_dia':
+                    return self::receberDia($texto, $norm, $estado);
+                case 'aguardando_hora':
+                    return self::receberHora($texto, $norm, $estado);
+                case 'aguardando_confirmacao':
+                    return self::receberConfirmacao($norm, $estado);
+                case 'aguardando_nome_cancelamento':
+                    return self::receberNomeCancelamento($texto, $norm, $estado);
+                case 'confirmar_cancelamento':
+                    return self::confirmarCancelamento($norm, $estado);
+            }
         }
 
-        // etapas que esperam uma resposta especifica
-        switch ($estado['etapa'] ?? 'inicio') {
-            case 'aguardando_nome':
-                return self::receberNome($texto, $norm, $estado);
-            case 'aguardando_dia':
-                return self::receberDia($texto, $norm, $estado);
-            case 'aguardando_hora':
-                return self::receberHora($texto, $norm, $estado);
-            case 'aguardando_confirmacao':
-                return self::receberConfirmacao($norm, $estado);
-            case 'aguardando_nome_cancelamento':
-                return self::receberNomeCancelamento($texto, $norm, $estado);
-            case 'confirmar_cancelamento':
-                return self::confirmarCancelamento($norm, $estado);
+        $resposta = self::intencaoGeral($texto, $norm, $estado);
+
+        // Quem perguntou preço, endereço ou horário quer informação, não
+        // agendamento. Empurrar "Quer marcar uma avaliação?" no fim de
+        // toda resposta é forçar o que a pessoa não pediu — e no meio do
+        // fluxo ainda sai junto com a próxima pergunta, o que vira
+        // duas seguidas. O convite só cabe na saudação inicial.
+        $resposta['texto'] = self::semConviteDeAgendamento($resposta['texto']);
+
+        // Só lembra o ponto quando a resposta NÃO é em si a próxima
+        // pergunta do fluxo. "Quero marcar" no meio da conversa já
+        // pede o nome; repetir o lembrete faria duas seguidas.
+        $assumiuFluxo = self::querAgendar($norm)
+            || self::querCancelar($norm)
+            || self::querRemarcar($norm);
+
+        if ($duvidaNoMeio && !$assumiuFluxo) {
+            $estado['etapa'] = $etapaAntes;
+            $resposta['texto'] = rtrim($resposta['texto']) . "\n\n" . self::lembreteDoFluxo($estado);
         }
 
-        // --------- intenções gerais ---------
-        // A ordem importa: preço vem antes de tratamento, e horário de
-        // funcionamento vem antes de "quero marcar".
+        return $resposta;
+    }
+
+    /**
+     * Lembra ao paciente onde a conversa tinha parado, depois de uma
+     * dúvida no meio do agendamento. Usa só o que já foi combinado.
+     */
+    private static function lembreteDoFluxo(array $estado): string
+    {
+        // Só a próxima pergunta. Sem "Voltando ao agendamento": a
+        // resposta à dúvida já veio, e repetir o caminho percorrido é
+        // o resumo que o paciente não pediu.
+        return match ((string) ($estado['etapa'] ?? 'inicio')) {
+            'aguardando_nome' => 'Me diz seu nome, sobrenome e telefone, por favor.',
+
+            'aguardando_dia' => 'Para que dia você quer marcar?',
+
+            'aguardando_hora' => 'Os horários de '
+                . Helpers::dataExtenso((string) ($estado['data'] ?? '')) . ' são '
+                . self::formatarSlots((array) ($estado['slots'] ?? [])) . '. Qual fica melhor?',
+
+            'aguardando_confirmacao' => 'Posso confirmar sua '
+                . mb_strtolower(self::nomeServico($estado)) . ' para '
+                . Helpers::dataExtenso((string) ($estado['data'] ?? '')) . ' às '
+                . (string) ($estado['hora'] ?? '') . '?',
+
+            'aguardando_nome_cancelamento' => 'Qual é o seu nome?',
+
+            'confirmar_cancelamento' => 'Confirma o cancelamento? Responda sim ou não.',
+
+            default => 'Posso te ajudar com mais alguma coisa?',
+        };
+    }
+
+    /**
+     * Corta o convite de agendamento no fim de uma resposta. Depois que
+     * o agendamento já foi concluído, esse convite é ruído — a pessoa
+     * só fez uma pergunta avulsa.
+     */
+    private static function semConviteDeAgendamento(string $texto): string
+    {
+        $finais = [
+            ' Quer marcar uma avaliação?',
+            ' Posso ajudar com mais alguma coisa?',
+            ' Quer que eu veja os horários disponíveis para você?',
+            ' Se quiser, já marco sua avaliação por aqui.',
+            ' Se preferir, marco uma avaliação por aqui mesmo.',
+            ' Se quiser, já marco sua avaliação por aqui mesmo.',
+        ];
+
+        foreach ($finais as $fim) {
+            $texto = str_replace($fim, '', $texto);
+        }
+
+        return rtrim($texto);
+    }
+
+    /**
+     * Intenções gerais, quando a conversa não está esperando uma
+     * resposta específica. A ordem importa: preço vem antes de
+     * tratamento, e horário de funcionamento antes de "quero marcar".
+     */
+    private static function intencaoGeral(string $texto, string $norm, array &$estado): array
+    {
+        // Resolvido uma vez, no topo, porque três intenções precisam
+        // saber se a pessoa citou um tratamento: "o tratamento de canal
+        // dói?" e uma duvida sobre o procedimento, nao uma reclamacao
+        // de dor — e responder dor no lugar da descricao seria perder
+        // a unica informacao que o site consegue dar.
+        $tratamento = Knowledge::tratamentoPorNome($norm);
+
+        // Rota "Tenho dúvidas" do botão de abertura. É um convite a
+        // perguntar, não uma pergunta: só encaminha, não zera nada que
+        // já esteja em andamento e não insiste em agendar. Comparação
+        // exata para não sequestrar uma dúvida de verdade como
+        // "tenho dúvidas sobre aparelho".
+        if (self::querTirarDuvida($norm)) {
+            return ['ok' => true, 'texto' => 'Pode perguntar, fico à disposição 😊 '
+                . 'Se preferir, também consigo agendar sua avaliação.'];
+        }
 
         if (self::querPreco($norm)) {
             return ['ok' => true, 'texto' => 'Cada caso tem um valor próprio, então esse valor sai '
@@ -84,10 +194,41 @@ final class Fallback
                 . 'Quer marcar uma avaliação?'];
         }
 
-        if (self::ehSaudacao($norm)) {
+        // "Olá! Quero marcar minha avaliação" começa com saudação, mas
+        // o que a pessoa fez foi pedir horário. A saudação só manda
+        // quando não vem pedido junto — é o caso dos botões do site.
+        if (self::ehSaudacao($norm) && !self::querAgendar($norm)) {
             $estado['etapa'] = 'inicio';
-            return ['ok' => true, 'texto' => 'Olá 😊 Você é o Dr. Maycon Gomes. '
-                . 'Ainda fica alguma dúvida ou prefere marcar uma avaliação?'];
+            return ['ok' => true, 'texto' => 'Olá 😊 Gostaria de mais informações '
+                . 'ou quer agendar uma avaliação?'];
+        }
+
+        // Dor é a urgência mais comum de quem escreve. Nada no site
+        // autoriza a prometer atendimento imediato, então o caminho
+        // honesto é o WhatsApp, que é o canal direto do Dr. Maycon.
+        // Só quando a pessoa não citou um tratamento: se citou, ela
+        // quer saber sobre o procedimento, e a resposta dele vem depois.
+        if (self::temDor($norm) && $tratamento === null) {
+            $estado['etapa'] = 'inicio';
+            return ['ok' => true, 'texto' => 'Entendi, e quando é dor o mais rápido é falar '
+                . 'com o Dr. Maycon para ele avaliar a sua situação. O WhatsApp é '
+                . Knowledge::TELEFONE . '. Se preferir, marco uma avaliação por aqui mesmo.'];
+        }
+
+        // Pagamento e convenio vem ANTES de "quanto custa": perguntar
+        // "aceita parcelar?" nao e perguntar preco, e a resposta de
+        // preco deixaria a pessoa sem o que ela quis saber.
+        if (self::querConvenio($norm)) {
+            $estado['etapa'] = 'inicio';
+            return ['ok' => true, 'texto' => 'Sobre convênio eu não tenho essa informação aqui 😕 '
+                . 'O Dr. Maycon confirma isso com você. Quer marcar uma avaliação?'];
+        }
+
+        if (self::querFormaDePagamento($norm)) {
+            $estado['etapa'] = 'inicio';
+            return ['ok' => true, 'texto' => 'As formas de pagamento quem confirma é o Dr. Maycon, '
+                . 'assim ele explica tudo certinho junto com o seu caso. '
+                . 'Quer marcar uma avaliação?'];
         }
 
         if (self::querCancelar($norm) || self::querRemarcar($norm)) {
@@ -117,7 +258,57 @@ final class Fallback
         if (self::querAgendar($norm)) {
             $estado['etapa'] = 'aguardando_nome';
             $estado['servico'] = '';
-            return ['ok' => true, 'texto' => 'Ótimo 😊 Para marcar, qual é o seu nome?'];
+            return ['ok' => true, 'texto' => 'Claro 😊 Me diga seu nome, sobrenome e telefone, por favor.'];
+        }
+
+        // "quanto tempo dura o clareamento?" — o prazo precisa entrar
+        // ANTES do match de tratamento, senao o nome do procedimento
+        // desviava a resposta para a descricao dele e a pessoa nao
+        // recebia a informacao que tinha pedido.
+        $duracao = self::querDuracao($norm);
+        if ($duracao !== null) {
+            return ['ok' => true, 'texto' => $duracao['resposta']
+                . ' Posso marcar a avaliação para o Dr. Maycon avaliar o seu caso?'];
+        }
+
+        // Quem ja usa aparelho e escreve sobre aperto, arame solto ou
+        // quebra procura socorro, nao a descricao do tratamento e
+        // tampouco a indicacao. Nada disso esta no site, entao a
+        // resposta honesta e encaminhar. Antes da checagem de crianca:
+        // "meu filho quebrou o aparelho" e urgencia, nao indicacao.
+        if (self::temProblemaNoAparelho($norm)) {
+            $estado['etapa'] = 'inicio';
+            return ['ok' => true, 'texto' => 'Entendi. Nesses casos o Dr. Maycon precisa ver '
+                . 'o que está acontecendo para dizer o que fazer. O WhatsApp é '
+                . Knowledge::TELEFONE . '. Se preferir, marco uma avaliação por aqui.'];
+        }
+
+        // "meu filho de 8 anos precisa de aparelho" — com crianca na
+        // frase a duvida e de indicacao, nao de descricao. A FAQ fala
+        // da fase de desenvolvimento; a descricao do tratamento nao.
+        if (self::falaDeCrianca($norm)) {
+            $faqCrianca = Knowledge::faqPorChave('indicacao');
+            if ($faqCrianca !== null) {
+                return ['ok' => true, 'texto' => $faqCrianca['resposta']
+                    . ' Quer marcar a avaliação?'];
+            }
+        }
+
+        // "atende sábado?", "abrem domingo?" — resposta vem da tabela
+        // horarios, a mesma fonte do site, para nao divergir do rodapé.
+        $diaPerguntado = self::querDiaDaSemana($norm);
+        if ($diaPerguntado !== null) {
+            $textoDias = mb_strtolower(Knowledge::textoDias());
+            $nomeDia = mb_strtolower($diaPerguntado['nome']);
+            $estado['etapa'] = 'inicio';
+
+            if (in_array($diaPerguntado['nome'], Knowledge::diasDeAtendimento(), true)) {
+                return ['ok' => true, 'texto' => 'Sim, atendo ' . $nomeDia . ' 😊 '
+                    . 'O atendimento é ' . $textoDias . '. Quer que eu veja os horários livres?'];
+            }
+
+            return ['ok' => true, 'texto' => 'Não atendo ' . $nomeDia . '. '
+                . 'O atendimento é ' . $textoDias . '. Quer marcar em um desses dias?'];
         }
 
         // dúvida sobre um tratamento específico
@@ -157,14 +348,26 @@ final class Fallback
         }
 
         // --------- sem intencao reconhecida ---------
-        if ($estado['turnos'] === 1) {
-            return ['ok' => true, 'texto' => 'Oi 😊 Posso tirar dúvidas sobre os tratamentos e '
-                . 'marcar sua avaliação. O que você gostaria de saber?'];
+        // Cortesia pura ("obrigado", "até mais") não é pergunta: citar
+        // como se fosse dúvida soaria deslocado.
+        if (self::ehCortesia($norm)) {
+            $estado['etapa'] = 'inicio';
+            return ['ok' => true, 'texto' => 'Por nada 😊 Fico por aqui. '
+                . 'Quer marcar sua avaliação?'];
         }
 
-        return ['ok' => true, 'texto' => 'Essa eu prefiro encaminhar para o Dr. Maycon, para ele '
-            . 'responder com certeza. O WhatsApp é ' . Knowledge::TELEFONE . '. '
-            . 'Ou, se preferir, posso marcar sua avaliação agora.'];
+        // Nao adianta repetir uma saudacao: a pessoa fez uma pergunta de
+        // verdade e merece ver a propria pergunta de volta. O que nao
+        // existe no site vai para o Dr. Maycon, sem inventar resposta.
+        $assunto = self::assunto($texto);
+
+        return ['ok' => true, 'texto' => $assunto === ''
+            ? 'Posso tirar dúvidas sobre os tratamentos e marcar sua avaliação. '
+                . 'O que você gostaria de saber?'
+            : 'Entendi, você perguntou sobre "' . $assunto . '". Essa informação eu não '
+                . 'tenho aqui, então prefiro confirmar com o Dr. Maycon para não te '
+                . 'passar nada errado — o WhatsApp é ' . Knowledge::TELEFONE . '. '
+                . 'Se quiser, já marco sua avaliação por aqui.'];
     }
 
     // ===================================================================
@@ -173,18 +376,13 @@ final class Fallback
 
     private static function receberNome(string $texto, string $norm, array &$estado): array
     {
-        if (self::ehSaudacao($norm)) {
-            return ['ok' => true, 'texto' => 'Me diz seu nome para eu reservar 😊'];
+        if (self::ehSaudacao($norm) || self::ehSim($norm)) {
+            return ['ok' => true, 'texto' => 'Me diz seu nome, sobrenome e telefone, por favor 😊'];
         }
 
-        if (self::ehSim($norm)) {
-            return ['ok' => true, 'texto' => 'Me diz seu nome, por favor 😊'];
-        }
-
-        // o visitante mandou um dia/horário junto do nome
         $nome = self::extrairNome($texto);
         if ($nome === null) {
-            return ['ok' => true, 'texto' => 'Como posso te chamar?'];
+            return ['ok' => true, 'texto' => 'Como posso te chamar? Preciso do nome e sobrenome.'];
         }
 
         $estado['nome'] = $nome;
@@ -201,15 +399,14 @@ final class Fallback
             $estado['servico'] = $servico['titulo'];
         }
 
-        $estado['etapa'] = 'aguardando_dia';
-
-        // se a frase já trouxe um dia, tenta resolver agora
+        // se ela já disse o dia, respeita o que ela pediu
         $dia = self::interpretarDia($norm);
         if ($dia !== null) {
             return self::montarDisponibilidade($dia, $estado);
         }
 
-        return ['ok' => true, 'texto' => 'Obrigada, ' . $nome . '! Para que dia você quer marcar?'];
+        // sem dia dito: a agenda manda. Nada de perguntar "que dia?".
+        return self::oferecerProximoHorario($estado);
     }
 
     private static function receberDia(string $texto, string $norm, array &$estado): array
@@ -251,7 +448,10 @@ final class Fallback
 
     /**
      * Casa a frase do visitante com um horário da lista, sem aceitar
-     * números soltos: "09:30", "9:30", "9h30" e "9h".
+     * números soltos: "09:30", "9:30", "09h30" e "9h".
+     *
+     * O 0? é obrigatório dos dois lados: a própria lista sai como
+     * "09:30h", então quem digita exatamente o que viu precisa casar.
      */
     private static function escolherSlotDaLista(string $norm, array $slots): ?string
     {
@@ -261,12 +461,12 @@ final class Fallback
             $mm = substr($hora, 3, 2);
 
             // 09:30 · 9:30 · 09h30
-            if (preg_match('/(^|\s)' . $hh . '\s*[:h]\s*0?' . $mm . '($|\s)/', $norm) === 1) {
+            if (preg_match('/(^|\s)0?' . $hh . '\s*[:h]\s*0?' . $mm . '($|\s)/', $norm) === 1) {
                 return $hora;
             }
 
-            // 9h
-            if (preg_match('/(^|\s)' . $hh . '\s*h($|\s)/', $norm) === 1) {
+            // 9h · 09h
+            if (preg_match('/(^|\s)0?' . $hh . '\s*h($|\s)/', $norm) === 1) {
                 return $hora;
             }
         }
@@ -334,10 +534,8 @@ final class Fallback
         }
 
         if (self::ehNao($norm)) {
-            $estado['etapa'] = 'aguardando_hora';
-            $estado['hora'] = '';
-            return ['ok' => true, 'texto' => 'Sem problema. Os horários de ' . Helpers::dataExtenso((string) $estado['data'])
-                . ' são ' . self::formatarSlots($estado['slots'] ?? []) . '. Qual você prefere?'];
+            // não reabre a lista do dia: anda para a próxima vaga.
+            return self::proximoSlot($estado);
         }
 
         if ($remarcando) {
@@ -365,7 +563,8 @@ final class Fallback
 
         if ($ag === null) {
             $estado['etapa'] = 'inicio';
-            return ['ok' => true, 'texto' => 'Não encontrei nenhum horário marcado para ' . $nome . '. '
+            return ['ok' => true, 'texto' => 'Não encontrei nenhum horário marcado para '
+                . self::primeiroNome($nome) . '. '
                 . 'Quer marcar uma nova avaliação?'];
         }
 
@@ -502,6 +701,94 @@ final class Fallback
             . self::formatarSlots($estado['slots']) . '. Qual fica melhor pra você?'];
     }
 
+    /**
+     * A pessoa pediu pra marcar e ainda não escolheu nada: quem dita o
+     * horário é a agenda, não o paciente. Procura a primeira vaga a
+     * partir de hoje e oferece. Nada aqui é inventado — tudo vem de
+     * Agenda::disponibilidade(), que já desconta o que está ocupado.
+     */
+    private static function oferecerProximoHorario(array &$estado): array
+    {
+        $hoje = date('Y-m-d');
+
+        for ($i = 0; $i < 21; $i++) {
+            $dia = date('Y-m-d', strtotime('+' . $i . ' day', strtotime($hoje)));
+
+            $resultado = Tools::executar('consultar_disponibilidade', [
+                'data'    => $dia,
+                'servico' => (string) ($estado['servico'] ?? ''),
+            ], $estado);
+
+            if ($resultado['ok'] && ($estado['slots'] ?? []) !== []) {
+                return self::oferecerSlotAtual($estado);
+            }
+        }
+
+        $estado['etapa'] = 'inicio';
+        return ['ok' => true, 'texto' => 'Olha, nos próximos dias a agenda está fechada 😕 '
+            . 'O Dr. Maycon consegue te encaixar. O WhatsApp é ' . Knowledge::TELEFONE . '.'];
+    }
+
+    /**
+     * Oferece o horário em que a lista está parada (estado['indiceSlot']).
+     */
+    private static function oferecerSlotAtual(array &$estado): array
+    {
+        $slots = $estado['slots'] ?? [];
+        $i = (int) ($estado['indiceSlot'] ?? 0);
+
+        if ($slots === [] || !isset($slots[$i])) {
+            return self::proximoSlot($estado);
+        }
+
+        $hora = date('H:i', (int) strtotime((string) $slots[$i]));
+
+        $estado['hora'] = $hora;
+        $estado['indiceSlot'] = $i;
+        $estado['etapa'] = 'aguardando_confirmacao';
+
+        $nome = self::primeiroNome((string) ($estado['nome'] ?? ''));
+
+        return ['ok' => true, 'texto' => ($nome !== '' ? $nome . ', ' : '')
+            . 'na agenda encontrei ' . Helpers::dataExtenso((string) $estado['data'])
+            . ' às ' . $hora . '. Posso agendar aí?'];
+    }
+
+    /**
+     * Anda para a próxima vaga: o resto do dia, e se acabar, o próximo
+     * dia em que a agenda abre.
+     */
+    private static function proximoSlot(array &$estado): array
+    {
+        $slots = $estado['slots'] ?? [];
+        $i = (int) ($estado['indiceSlot'] ?? 0) + 1;
+
+        if (isset($slots[$i])) {
+            $estado['indiceSlot'] = $i;
+            return self::oferecerSlotAtual($estado);
+        }
+
+        $de = (string) ($estado['data'] ?? date('Y-m-d'));
+
+        for ($d = 1; $d <= 21; $d++) {
+            $dia = date('Y-m-d', strtotime('+' . $d . ' day', strtotime($de)));
+
+            $resultado = Tools::executar('consultar_disponibilidade', [
+                'data'    => $dia,
+                'servico' => (string) ($estado['servico'] ?? ''),
+            ], $estado);
+
+            if ($resultado['ok'] && ($estado['slots'] ?? []) !== []) {
+                $estado['indiceSlot'] = 0;
+                return self::oferecerSlotAtual($estado);
+            }
+        }
+
+        $estado['etapa'] = 'inicio';
+        return ['ok' => true, 'texto' => 'Essa foi a última vaga que encontrei por aqui 😕 '
+            . 'O Dr. Maycon consegue te encaixar. O WhatsApp é ' . Knowledge::TELEFONE . '.'];
+    }
+
     private static function confirmar(string $hora, array &$estado): array
     {
         $estado['hora'] = $hora;
@@ -581,6 +868,188 @@ final class Fallback
         return false;
     }
 
+    /**
+     * Dor, inchaco, urgencia. Nao existe promessa possivel aqui: o site
+     * nao fala de atendimento de urgencia, entao a resposta so oferece
+     * o caminho mais rapido sem garantir hora.
+     */
+    private static function temDor(string $norm): bool
+    {
+        foreach (['dor', 'doendo', 'doer', 'doi', 'inchac', 'inchad', 'incha ',
+            'abscesso', 'inflam', 'nao aguento', 'emergencia', 'urgencia',
+            'sensibilidade'] as $c) {
+            if (str_contains($norm, $c)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** convenio e plano de saude: o site nao informa nada sobre isso */
+    private static function querConvenio(string $norm): bool
+    {
+        foreach (['convenio', 'plano de saude', 'plano odontologico', 'iodonto'] as $c) {
+            if (str_contains($norm, $c)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** formas de pagamento: tambem nao existe no site */
+    private static function querFormaDePagamento(string $norm): bool
+    {
+        foreach (['forma de pagamento', 'formas de pagamento', 'cartao', 'pix',
+            'dinheiro', 'no debito', 'no credito', 'parcelam', 'parcela',
+            'parcelamento', 'divide'] as $c) {
+            if (str_contains($norm, $c)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** crianca ou idade na frase: a duvida muda de descricao para indicacao */
+    private static function falaDeCrianca(string $norm): bool
+    {
+        // exige numero antes de "anos": sozinho, "faz anos que" nao fala de crianca
+        if (preg_match('/\b\d{1,2}\s*anos\b/', $norm) === 1) {
+            return true;
+        }
+
+        foreach (['filho', 'filha', 'crianca', 'menino', 'menina', 'bebe', 'guri',
+            'meu filho', 'minha filha'] as $c) {
+            if (str_contains($norm, $c)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Aperto, arame solto, quebra: socorro de quem ja usa aparelho.
+     *
+     * Exige a palavra "aparelho" na frase. Sem essa checagem,
+     * "quebrei meu dente" caia aqui e perdia a descricao de prótese,
+     * que era a resposta que a pessoa queria.
+     */
+    private static function temProblemaNoAparelho(string $norm): bool
+    {
+        $situacoes = ['manutencao', 'aperto', 'apertar', 'apertou', 'quebrou', 'quebrei',
+            'quebrado', 'descolou', 'soltou', 'solta', 'machuc', 'bati', 'caiu',
+            'arame', 'pinca', 'grudou', 'fio', 'sem o aparelho', 'sem o tratamento'];
+
+        $temSituacao = false;
+        foreach ($situacoes as $c) {
+            if (str_contains($norm, $c)) {
+                $temSituacao = true;
+                break;
+            }
+        }
+
+        if (!$temSituacao) {
+            return false;
+        }
+
+        foreach (['aparelho', 'aparelhos', 'braces', 'ortodontico', 'fio'] as $a) {
+            if (str_contains($norm, $a)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Pergunta de prazo. Devolve a entrada do FAQ quando a frase pede
+     * por tempo — assim o texto continua vindo de um lugar so.
+     *
+     * @return array{chaves:array,pergunta:string,resposta:string}|null
+     */
+    private static function querDuracao(string $norm): ?array
+    {
+        $chaves = ['quanto tempo', 'demora', 'prazo', 'duracao', 'tempo de tratamento',
+            'quantas sessoes', 'quantas secoes', 'quantas consultas', 'quanto tempo leva'];
+
+        $bateu = false;
+        foreach ($chaves as $c) {
+            if (str_contains($norm, $c)) {
+                $bateu = true;
+                break;
+            }
+        }
+
+        if (!$bateu) {
+            return null;
+        }
+
+        foreach (Knowledge::faq() as $f) {
+            if (in_array('quanto tempo', (array) $f['chaves'], true)) {
+                return $f;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * "atende sabado?", "abrem domingo?" — pergunta por um dia especifico.
+     *
+     * @return array{num:int,nome:string}|null
+     */
+    private static function querDiaDaSemana(string $norm): ?array
+    {
+        $dias = [
+            'domingo' => 0,
+            'segunda'  => 1,
+            'terca'    => 2,
+            'quarta'   => 3,
+            'quinta'   => 4,
+            'sexta'    => 5,
+            'sabado'   => 6,
+        ];
+
+        foreach ($dias as $nome => $num) {
+            if (str_contains($norm, $nome)) {
+                return ['num' => $num, 'nome' => Helpers::diaSemana($num)];
+            }
+        }
+
+        return null;
+    }
+
+    /** cortesia que nao é pergunta nem resposta de fluxo */
+    private static function ehCortesia(string $norm): bool
+    {
+        $chaves = ['obrigado', 'obrigada', 'valeu', 'vlw', 'agradeco', 'agradecida',
+            'de nada', 'tchau', 'ate mais', 'flw'];
+
+        return in_array(trim($norm), $chaves, true);
+    }
+
+    /**
+     * Resume a pergunta em poucas palavras, para a resposta poder citar
+     * o que a pessoa perguntou. Sem isso, "tem estacionamento?" era
+     * respondido com uma saudacao — nada a ver com a pergunta.
+     */
+    private static function assunto(string $texto): string
+    {
+        $limpo = trim((string) preg_replace('/[?!.]+$/u', '', trim($texto)));
+        $limpo = trim((string) preg_replace('/\s+/u', ' ', $limpo));
+
+        if (mb_strlen($limpo) > 46) {
+            $limpo = mb_substr($limpo, 0, 46);
+            $corte = mb_strrpos($limpo, ' ');
+            if ($corte !== false && $corte > 16) {
+                $limpo = mb_substr($limpo, 0, $corte);
+            }
+            $limpo .= '…';
+        }
+
+        return $limpo;
+    }
+
     private static function querHorarioDeAtendimento(string $norm): bool
     {
         // "que horas vocês atendem", "qual o horário de funcionamento"
@@ -594,6 +1063,22 @@ final class Fallback
             || str_contains($norm, 'disponivel') || str_contains($norm, 'vaga');
 
         return !$querMarcar;
+    }
+
+    /**
+     * O paciente apertou o botão "Tenho dúvidas" da abertura (ou
+     * escreveu algo equivalente, curto e solto). Comparação exata:
+     * uma dúvida de verdade como "tenho dúvidas sobre aparelho" tem
+     * de ir para a base de conhecimento, não para cá.
+     */
+    private static function querTirarDuvida(string $norm): bool
+    {
+        return in_array($norm, [
+            'duvida', 'duvidas', 'tenho duvida', 'tenho duvidas',
+            'tenho uma duvida', 'tenho umas duvidas', 'uma duvida',
+            'quero tirar duvida', 'tirar uma duvida', 'tenho perguntas',
+            'tenho uma pergunta', 'perguntas',
+        ], true);
     }
 
     private static function querAgendar(string $norm): bool
@@ -679,16 +1164,20 @@ final class Fallback
     /** a mensagem é uma dúvida sobre o consultório? */
     private static function ehDuvidaDeConhecimento(string $norm): bool
     {
-return self::querPreco($norm)
-  || self::jaFezAvaliacao($norm)
-  || self::querAgendarDireto($norm)
-  || Knowledge::tratamentoPorNome($norm) !== null
-  || Knowledge::faqPorTexto($norm) !== null
-  || self::querHorarioDeAtendimento($norm)
-  || str_contains($norm, 'endereco')
-  || str_contains($norm, 'onde fica')
-  || str_contains($norm, 'telefone')
-  || str_contains($norm, 'whatsapp');
+        return self::querPreco($norm)
+            || self::jaFezAvaliacao($norm)
+            || self::querAgendarDireto($norm)
+            || self::temDor($norm)
+            || self::querConvenio($norm)
+            || self::querFormaDePagamento($norm)
+            || Knowledge::tratamentoPorNome($norm) !== null
+            || Knowledge::faqPorTexto($norm) !== null
+            || self::querHorarioDeAtendimento($norm)
+            || self::querDiaDaSemana($norm) !== null
+            || str_contains($norm, 'endereco')
+            || str_contains($norm, 'onde fica')
+            || str_contains($norm, 'telefone')
+            || str_contains($norm, 'whatsapp');
     }
 
     private static function querCancelar(string $norm): bool
@@ -713,6 +1202,21 @@ return self::querPreco($norm)
 
     // --------- nome, data, hora ---------
 
+    /**
+     * Só o primeiro nome, para a conversa. A assistente não repete o
+     * nome inteiro nem o telefone: chama pelo primeiro nome e segue.
+     * O nome completo continua no cadastro, não aqui.
+     */
+    private static function primeiroNome(string $nome): string
+    {
+        $nome = trim($nome);
+        if ($nome === '') {
+            return '';
+        }
+        $partes = explode(' ', $nome);
+        return (string) $partes[0];
+    }
+
     private static function extrairNome(string $texto): ?string
     {
         $texto = trim($texto);
@@ -727,7 +1231,28 @@ return self::querPreco($norm)
             $texto
         ) ?? $texto;
 
-        $limpa = preg_replace('/\s*(e sou|meu nome e|me chamo|é o|é a)\s*/iu', ' ', $limpa) ?? $limpa;
+        // Corta no que não é nome. Sem isto, "Meu nome é Ana Teste,
+        // telefone 69 99123-4567" virava o nome inteiro do paciente.
+        // O possessivo entra junto: "renata souza, meu telefone é..."
+        // tem de parar no "meu", senão o nome vira "Renata Souza, Meu".
+        $limpa = preg_replace(
+            '/\b(meu|minha|seu|sua)?\s*(telefone|celular|whats(app)?|fone|n[úu]mero)\b.*$/iu',
+            '',
+            $limpa
+        ) ?? $limpa;
+
+        // telefone solto no fim, mesmo sem a palavra "telefone". Aceita
+        // colado na vírgula e sem DDD: "indra lumia,99245052" — o
+        // regex antigo pedia DDD + 8 dígitos e deixava passar.
+        $limpa = preg_replace('/[\s,;(\-]*\+?\d[\d\s.\-()]{5,}\d\s*$/u', '', $limpa) ?? $limpa;
+
+        $limpa = preg_replace('/\s*(e sou|meu nome [eé]|me chamo|sou o|sou a)\s*/iu', ' ', $limpa) ?? $limpa;
+
+        // artigo antes do nome: "é a Maria" vira "Maria". O \b é
+        // obrigatório: sem ele, "é a" casa dentro de "é Ana" e a
+        // primeira letra do nome some.
+        $limpa = preg_replace('/\b([ée]) (o|a|os|as)\s+/iu', ' ', $limpa) ?? $limpa;
+
         $limpa = preg_replace(
             '/\s*(quero|preciso|gostaria|queria|posso|posso marcar|agendar)\b.*$/iu',
             '',
@@ -741,17 +1266,62 @@ return self::querPreco($norm)
         }
 
         $palavras = explode(' ', $limpa);
-        if (count($palavras) < 2) {
+
+        // "João Pedro da Silva" é nome legítimo: artigo de sobrenome
+        // não pode derrubar o cadastro. Contamos só as palavras de
+        // verdade e deixamos "de/da/do/dos/das" passarem no meio.
+        $reais = array_values(array_filter($palavras, static function (string $p): bool {
+            return !in_array(mb_strtolower($p), ['de', 'do', 'da', 'dos', 'das', 'e'], true);
+        }));
+
+        if ($reais === []) {
             return null;
         }
 
-        foreach ($palavras as $p) {
-            if (mb_strlen($p) < 2 || in_array(mb_strtolower($p), ['de', 'do', 'da', 'que', 'pra', 'para'], true)) {
+        foreach ($reais as $p) {
+            if (mb_strlen($p) < 2) {
                 return null;
             }
         }
 
-        return mb_convert_case($limpa, MB_CASE_TITLE, 'UTF-8');
+        // Uma palavra de verdade só também é nome: "Renata", "Lu",
+        // "João". O que não pode é engolir "sexta" ou "amanhã" como
+        // nome de paciente.
+        if (count($reais) === 1
+            && in_array(mb_strtolower($reais[0]), self::naoEhNome(), true)) {
+            return null;
+        }
+
+        $titulo = mb_convert_case($limpa, MB_CASE_TITLE, 'UTF-8');
+
+        // Artigo de sobrenome não capitaliza: "João Pedro da Silva",
+        // não "João Pedro Da Silva". Só a primeira palavra muda.
+        $partes = explode(' ', $titulo);
+        $artigos = ['da', 'de', 'do', 'das', 'dos', 'e'];
+
+        foreach ($partes as $i => $p) {
+            if ($i > 0 && in_array(mb_strtolower($p), $artigos, true)) {
+                $partes[$i] = mb_strtolower($p, 'UTF-8');
+            }
+        }
+
+        return implode(' ', $partes);
+    }
+
+    /**
+     * Palavras que podem chegar quando o agente pede o nome, mas não
+     * são nome: dias, respostas e assuntos do consultório.
+     *
+     * @return array<int, string>
+     */
+    private static function naoEhNome(): array
+    {
+        return ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo',
+            'amanha', 'hoje', 'ontem', 'depois', 'antes', 'semana',
+            'sim', 'nao', 'obrigado', 'obrigada', 'valeu', 'ok', 'tchau',
+            'agendar', 'marcar', 'avaliacao', 'cancelar', 'remarcar',
+            'preco', 'valor', 'horario', 'horarios', 'endereco', 'telefone',
+            'whatsapp', 'convenio', 'pagamento', 'clinica', 'consultorio'];
     }
 
     private static function extrairTelefone(string $texto): ?string

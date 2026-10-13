@@ -430,6 +430,36 @@
   margin-left: 0.4rem;
 }
 
+/* Horarios: dia + dois horarios + situacao + tres botoes por linha.
+   Override obrigatorio porque .adm-tabela--editavel pede 860px, e aqui as
+   colunas sao estreitas de verdade. */
+.adm-tabela--horarios {
+  min-width: 660px;
+}
+
+.adm-tabela--horarios td:first-child {
+  min-width: 150px;
+}
+
+.adm-input--hora {
+  width: 108px;
+  text-align: center;
+}
+
+.adm-card--novo-horario {
+  margin-top: 1.5rem;
+  max-width: 720px;
+}
+
+/* No telefone os tres botoes empilham, senao eles esticariam a linha
+   e o dia e os horarios ficariam espremidos contra a borda. */
+@media (max-width: 560px) {
+  .adm-tabela--horarios .adm-col-acoes {
+    white-space: normal;
+    text-align: center;
+  }
+}
+
 /* ---- card de "Adicionar serviço" ----
    Grid com áreas nomeadas: os campos ficam numa linha alinhada e os
    botões numa linha própria. Sem áreas nomeadas, o número de filhos e
@@ -577,6 +607,12 @@
   color: #24578f;
 }
 
+/* Aguardando o Dr. confirmar a ida do paciente. */
+.adm-status.is-pendente {
+  background: #f1f3f6;
+  color: var(--ink-400);
+}
+
 .adm-origem {
   font-size: 0.74rem;
   color: var(--ink-400);
@@ -613,6 +649,39 @@
 
 .adm-acao--ok {
   color: #0a6b60;
+}
+
+/* Confirmar a ida do paciente: destaque, porque é a ação principal
+   do fluxo novo — o agendamento nasce pendente e só vira confirmado aqui. */
+.adm-acao--confirmar {
+  color: var(--teal-600);
+  font-weight: 600;
+}
+
+.adm-acao--confirmar:hover {
+  color: #0a7d4f;
+}
+
+/* Confirmar pelo WhatsApp: mesmo peso visual das demais ações, com um
+   verde só para separar do "Atendido" e do "Excluir". */
+.adm-acao--wpp {
+  color: var(--ink-600);
+}
+
+.adm-acao--wpp:hover {
+  color: #0a7d4f;
+}
+
+/* Telefone ausente ou inválido: o botão fica visível, mas sem ação. */
+.adm-acao--inativo {
+  color: var(--ink-400);
+  cursor: not-allowed;
+  border-bottom: 1px dashed currentColor;
+}
+
+.adm-acao--inativo:hover {
+  color: var(--ink-400);
+  text-decoration: none;
 }
 
 .adm-inline {

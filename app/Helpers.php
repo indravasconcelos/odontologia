@@ -216,6 +216,77 @@ final class Helpers
         return strlen($d) >= 10 && strlen($d) <= 13;
     }
 
+    /**
+     * Telefone no formato que o WhatsApp aceita em wa.me: 55 + DDD + número.
+     *
+     * Aceita o número como está salvo no banco (só dígitos, sem DDI), com
+     * pontuação, com +55 ou com 0055. Devolve null quando não dá para
+     * montar um número correto — prefiro não abrir link errado.
+     */
+    public static function whatsappNumero(?string $telefone): ?string
+    {
+        $d = self::telefone((string) $telefone);
+
+        if ($d === '') {
+            return null;
+        }
+
+        // 0055... (discado internacional)
+        if (str_starts_with($d, '00')) {
+            $d = substr($d, 2);
+        }
+
+        // Com DDI 55 na frente só sobra o telefone se o compramento fechar.
+        $comDdi = str_starts_with($d, '55')
+            && (strlen($d) === 12 || strlen($d) === 13);
+
+        if ($comDdi) {
+            $ddd   = substr($d, 2, 2);
+            $local = substr($d, 4);
+        } else {
+            $ddd   = substr($d, 0, 2);
+            $local = substr($d, 2);
+        }
+
+        $dddN = (int) $ddd;
+
+        // DDD brasileiro vai de 11 a 99, sempre com 2 dígitos.
+        if (strlen($ddd) !== 2 || $dddN < 11 || $dddN > 99) {
+            return null;
+        }
+
+        // 8 dígitos = fixo (2 a 5 no 1º), 9 = celular (9 no 1º).
+        $prefixo = (int) substr($local, 0, 1);
+        if (strlen($local) === 8) {
+            $aceito = $prefixo >= 2 && $prefixo <= 5;
+        } elseif (strlen($local) === 9) {
+            $aceito = $prefixo === 9;
+        } else {
+            $aceito = false;
+        }
+
+        if (!$aceito) {
+            return null;
+        }
+
+        return '55' . $ddd . $local;
+    }
+
+    /**
+     * Link wa.me com a mensagem já codificada. Devolve null quando o
+     * telefone não é aproveitável.
+     */
+    public static function whatsappLink(?string $telefone, string $mensagem): ?string
+    {
+        $numero = self::whatsappNumero($telefone);
+
+        if ($numero === null) {
+            return null;
+        }
+
+        return 'https://wa.me/' . $numero . '?text=' . rawurlencode($mensagem);
+    }
+
     public static function emailValido(string $email): bool
     {
         return filter_var(trim($email), FILTER_VALIDATE_EMAIL) !== false;

@@ -226,18 +226,18 @@ final class Agenda
         }
 
         // REGRA DE CONFLITO (vale para os 4 pontos que checam ocupacao):
-        //   - 'confirmado' bloqueia sempre;
+        //   - 'pendente' e 'confirmado' bloqueiam sempre. Pendente e o
+        //     agendamento novo, ainda sem resposta do paciente: o horario
+        //     ja esta reservado e nao pode ser oferecido a outra pessoa.
         //   - 'concluido' bloqueia apenas se o atendimento ainda NAO aconteceu.
         //     Depois que a hora passou, o horario volta a ficar livre para o
         //     Dr. marcar outro paciente no mesmo horario sem poluir a agenda.
         //   - 'cancelado' e 'faltou' nunca bloqueiam.
-        // Se status for apenas 'confirmado' ou 'concluido' com hora_fim
-        // ainda no futuro, o registro ocupa o horario.
         $agendamentos = Database::todos(
             "SELECT hora_inicio, hora_fim
                FROM agendamentos
               WHERE data = ?
-                AND (status = 'confirmado'
+                AND (status IN ('pendente', 'confirmado')
                      OR (status = 'concluido' AND TIMESTAMP(data, hora_fim) >= NOW()))",
             [$dataIso]
         );
@@ -280,11 +280,12 @@ final class Agenda
         $ini = Helpers::horaParaMinutos($horaIni);
         $fim = Helpers::horaParaMinutos($horaFim);
 
-        // mesma regra de conflito: 'concluido' so ocupa enquanto a hora nao passou
+        // mesma regra de conflito: 'pendente' e 'confirmado' ocupam sempre,
+        // 'concluido' so ocupa enquanto a hora nao passou
         $conflito = Database::valor(
             "SELECT COUNT(*) FROM agendamentos
               WHERE data = ?
-                AND (status = 'confirmado'
+                AND (status IN ('pendente', 'confirmado')
                      OR (status = 'concluido' AND TIMESTAMP(data, hora_fim) >= NOW()))
                 AND hora_inicio < ?
                 AND hora_fim > ?",
@@ -434,10 +435,13 @@ final class Agenda
                     $obs = trim(($obs !== null ? $obs . ' | ' : '') . 'Fora do expediente');
                 }
 
+                // Nasce 'pendente': o horário já fica reservado, mas a
+                // ida do paciente só vale quando o Dr. marcar "Confirmado"
+                // na agenda.
                 $pdo->prepare(
                     'INSERT INTO agendamentos
                        (paciente_id, servico_id, data, hora_inicio, hora_fim, status, origem, observacoes)
-                     VALUES (?, ?, ?, ?, ?, "confirmado", ?, ?)'
+                     VALUES (?, ?, ?, ?, ?, "pendente", ?, ?)'
                 )->execute([
                     $paciente['id'],
                     $servicoId,
@@ -522,13 +526,14 @@ final class Agenda
             $ok = Database::transacao(static function (PDO $pdo) use ($agendamentoId, $dataIso, $horaInicio, $horaFim, $excepcional): bool {
                 $pdo->prepare('SELECT id FROM agendamentos WHERE data = ? FOR UPDATE')->execute([$dataIso]);
 
-                // mesma regra de conflito na remarcação: 'concluido' só
-                // ocupa enquanto o atendimento ainda não aconteceu
+                // mesma regra de conflito na remarcação: 'pendente' e
+                // 'confirmado' ocupam sempre; 'concluido' só ocupa enquanto
+                // o atendimento ainda não aconteceu
                 $conflito = Database::valor(
                     "SELECT COUNT(*) FROM agendamentos
                       WHERE data = ?
                         AND id <> ?
-                        AND (status = 'confirmado'
+                        AND (status IN ('pendente', 'confirmado')
                              OR (status = 'concluido' AND TIMESTAMP(data, hora_fim) >= NOW()))
                         AND hora_inicio < ?
                         AND hora_fim > ?",
@@ -572,6 +577,142 @@ final class Agenda
         return ['ok' => true];
     }
 
+    /**
+     * Recalcula a hora_fim dos agendamentos que ainda vao acontecer
+     * quando a duracao do servico muda no painel.
+     *
+     * O agendamento guarda hora_inicio e hora_fim. Se a duracao sobe de
+     * 30 para 60, um agendamento ja marcado das 17:00 continuaria
+     * 17:00-17:30 e a agenda passaria a oferecer 17:30 como livre, batendo
+     * em cima de o que o dentista ja reservou. Aqui o fim acompanha a
+     * nova duracao, sem mudar o inicio nem a data.
+     *
+     * O atendimento ja realizado fica com o horario que teve no dia,
+     * como registro historico. Se o novo fim encostar em outro
+     * agendamento ou em um bloqueio, o horario permanece como estava e o
+     * motivo volta no retorno, para o dentista decidir na mao.
+     *
+     * @return array{atualizados:int, mantidos:int, conflitos:array<int,array{data:string,hora_inicio:string,novo_fim:string,motivo:string}>}
+     */
+    public static function recalcularDuracoes(int $servicoId, int $novaDuracao): array
+    {
+        $resultado = ['atualizados' => 0, 'mantidos' => 0, 'conflitos' => []];
+
+        if ($novaDuracao < 5) {
+            return $resultado;
+        }
+
+        $alvos = Database::todos(
+            "SELECT id, data, hora_inicio, hora_fim
+               FROM agendamentos
+              WHERE servico_id = ?
+                AND (status IN ('pendente', 'confirmado')
+                     OR (status = 'concluido' AND TIMESTAMP(data, hora_fim) >= NOW()))
+              ORDER BY data, hora_inicio",
+            [$servicoId]
+        );
+
+        if ($alvos === []) {
+            return $resultado;
+        }
+
+        $porDia = [];
+        foreach ($alvos as $a) {
+            $porDia[$a['data']][] = $a;
+        }
+
+        foreach ($porDia as $dia => $lista) {
+            $ocupacao = self::ocupacaoDeOutrosNoDia((string) $dia, $servicoId);
+
+            // semeia com o horario antigo de todo mundo do servico neste
+            // dia. Cada um sai da lista quando e analisado e volta com o
+            // horario que valeu: o novo se couber, o antigo se nao couber.
+            foreach ($lista as $ag) {
+                $ocupacao[] = [
+                    'ini' => Helpers::horaParaMinutos($ag['hora_inicio']),
+                    'fim' => Helpers::horaParaMinutos($ag['hora_fim']),
+                ];
+            }
+
+            foreach ($lista as $ag) {
+                $ini = Helpers::horaParaMinutos($ag['hora_inicio']);
+                $fimAntigo = Helpers::horaParaMinutos($ag['hora_fim']);
+                $novoFim = Helpers::somaMinutos($ag['hora_inicio'], $novaDuracao);
+                $fimNovo = Helpers::horaParaMinutos($novoFim);
+
+                $ocupacao = array_values(array_filter(
+                    $ocupacao,
+                    static fn (array $i): bool => !($i['ini'] === $ini && $i['fim'] === $fimAntigo)
+                ));
+
+                if ($novoFim === $ag['hora_fim']) {
+                    $ocupacao[] = ['ini' => $ini, 'fim' => $fimAntigo];
+                    continue;
+                }
+
+                $cabeNoDia = $fimNovo <= 24 * 60;
+                $bate = $cabeNoDia && self::intersecta($ini, $fimNovo, $ocupacao);
+
+                if (!$cabeNoDia || $bate) {
+                    $ocupacao[] = ['ini' => $ini, 'fim' => $fimAntigo];
+                    $resultado['mantidos']++;
+                    $resultado['conflitos'][] = [
+                        'data' => (string) $dia,
+                        'hora_inicio' => (string) $ag['hora_inicio'],
+                        'novo_fim' => $novoFim,
+                        'motivo' => $cabeNoDia ? 'bate em outro horário do dia' : 'o novo fim passaria da meia-noite',
+                    ];
+                    continue;
+                }
+
+                Database::query(
+                    'UPDATE agendamentos SET hora_fim = ?, atualizado_em = NOW() WHERE id = ?',
+                    [$novoFim, (int) $ag['id']]
+                );
+
+                $ocupacao[] = ['ini' => $ini, 'fim' => $fimNovo];
+                $resultado['atualizados']++;
+            }
+        }
+
+        return $resultado;
+    }
+
+    /** o que ocupa o dia sem contar os agendamentos deste servico */
+    private static function ocupacaoDeOutrosNoDia(string $dataIso, int $servicoId): array
+    {
+        $ocupacao = [];
+
+        $bloqueios = Database::todos(
+            'SELECT hora_inicio, hora_fim FROM bloqueios WHERE data = ?',
+            [$dataIso]
+        );
+        foreach ($bloqueios as $b) {
+            $ocupacao[] = [
+                'ini' => Helpers::horaParaMinutos($b['hora_inicio']),
+                'fim' => Helpers::horaParaMinutos($b['hora_fim']),
+            ];
+        }
+
+        $outros = Database::todos(
+            "SELECT hora_inicio, hora_fim
+               FROM agendamentos
+              WHERE data = ?
+                AND servico_id <> ?
+                AND (status IN ('pendente', 'confirmado')
+                     OR (status = 'concluido' AND TIMESTAMP(data, hora_fim) >= NOW()))",
+            [$dataIso, $servicoId]
+        );
+        foreach ($outros as $o) {
+            $ocupacao[] = [
+                'ini' => Helpers::horaParaMinutos($o['hora_inicio']),
+                'fim' => Helpers::horaParaMinutos($o['hora_fim']),
+            ];
+        }
+
+        return $ocupacao;
+    }
+
     public static function agendamento(int $id): ?array
     {
         return Database::primeiro(
@@ -586,21 +727,24 @@ final class Agenda
     }
 
     /** agendamentos de um dia, ja com paciente e servico */
-    public static function doDia(string $dataIso): array
-    {
-        return Database::todos(
-            'SELECT a.id, a.paciente_id, a.servico_id, a.hora_inicio, a.hora_fim,
-                    a.status, a.origem, a.observacoes,
-                    p.nome AS paciente_nome, p.telefone AS paciente_telefone,
-                    s.nome AS servico_nome, s.duracao_minutos
-               FROM agendamentos a
-               JOIN pacientes p ON p.id = a.paciente_id
-               JOIN servicos  s ON s.id = a.servico_id
-              WHERE a.data = ?
-              ORDER BY a.hora_inicio',
-            [$dataIso]
-        );
-    }
+      public static function doDia(string $dataIso): array
+      {
+          // Cancelados ficam no banco (histórico), mas não voltam para a
+          // agenda do dia: o "Excluir" do painel tira o agendamento da vista
+          // sem apagar o registro.
+          return Database::todos(
+              'SELECT a.id, a.paciente_id, a.servico_id, a.data, a.hora_inicio, a.hora_fim,
+                      a.status, a.origem, a.observacoes,
+                      p.nome AS paciente_nome, p.telefone AS paciente_telefone,
+                      s.nome AS servico_nome, s.duracao_minutos
+                 FROM agendamentos a
+                 JOIN pacientes p ON p.id = a.paciente_id
+                 JOIN servicos  s ON s.id = a.servico_id
+                WHERE a.data = ? AND a.status <> \'cancelado\'
+                ORDER BY a.hora_inicio',
+              [$dataIso]
+          );
+      }
 
     /** agendamento ativo de um paciente, usado pelo agente para cancelar/remarcar */
     public static function proximoDoPaciente(string $nomePaciente): ?array
@@ -616,9 +760,9 @@ final class Agenda
                FROM agendamentos a
                JOIN pacientes p ON p.id = a.paciente_id
                JOIN servicos  s ON s.id = a.servico_id
-              WHERE a.paciente_id = ?
-                AND a.status = 'confirmado'
-                AND a.data >= CURDATE()
+               WHERE a.paciente_id = ?
+                 AND a.status IN ('pendente', 'confirmado')
+                 AND a.data >= CURDATE()
               ORDER BY a.data, a.hora_inicio
               LIMIT 1",
             [$paciente['id']]

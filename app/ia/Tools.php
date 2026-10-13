@@ -283,11 +283,12 @@ final class Tools
         }
 
         // o agendamento e o mesmo: nao pode existir nenhum outro
-        // para o mesmo paciente na mesma data
+        // para o mesmo paciente na mesma data. 'pendente' ocupa igual
+        // 'confirmado' — o horario ja esta reservado.
         $outros = (int) Database::valor(
             'SELECT COUNT(*) FROM agendamentos
               WHERE paciente_id = ? AND data = ? AND id <> ?
-                AND (status = "confirmado"
+                AND (status IN ("pendente", "confirmado")
                      OR (status = "concluido" AND TIMESTAMP(data, hora_fim) >= NOW()))',
             [(int) $ag['paciente_id'], $data, (int) $ag['id']],
             0

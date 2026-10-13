@@ -88,11 +88,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // "ativo" nao entra aqui de proposito: quem liga e desliga
                 // e o botao Ativar/Desativar, para nao haver dois controles
                 // fazendo a mesma coisa na mesma tela.
+                $anterior = Agenda::servico($id);
+                $duracaoAntiga = $anterior !== null ? (int) $anterior['duracao_minutos'] : $duracao;
+
                 Database::query(
                     'UPDATE servicos SET nome = ?, duracao_minutos = ? WHERE id = ?',
                     [$nome, $duracao, $id]
                 );
-                Session::flash('"' . $nome . '" atualizado.');
+
+                $msg = '"' . $nome . '" atualizado.';
+
+                // A duracao nova vale para os horarios ainda nao
+                // acontecidos: sem este passo, um agendamento ja marcado
+                // das 17:00 continuaria terminando 17:30 e a agenda
+                // ofereceria 17:30 como livre, em cima de outra reserva.
+                if ($duracao !== $duracaoAntiga) {
+                    $recalculo = Agenda::recalcularDuracoes($id, $duracao);
+
+                    if ($recalculo['atualizados'] > 0) {
+                        $n = $recalculo['atualizados'];
+                        $msg .= ' ' . ($n === 1
+                            ? '1 horário já marcado foi ajustado para a nova duração.'
+                            : $n . ' horários já marcados foram ajustados para a nova duração.');
+                    }
+
+                    if ($recalculo['mantidos'] > 0) {
+                        $n = $recalculo['mantidos'];
+                        $msg .= ' ' . ($n === 1
+                            ? '1 horário ficou como estava por bater em outro.'
+                            : $n . ' horários ficaram como estavam por bater em outro.');
+                    }
+                }
+
+                Session::flash($msg);
             } else {
                 // ativo = 1 vem do padrao da tabela
                 Database::query(

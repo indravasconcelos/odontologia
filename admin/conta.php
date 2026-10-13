@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $usuario = Auth::usuario() ?? ['nome' => '', 'email' => '', 'tipo' => 'admin', 'criado_em' => null];
-$demo = Views::senhaDemoAtiva();
+$senhaPadrao = Views::senhaPadraoAtiva();
 $iaModo = (string) (Env::get('AI_MODO', 'auto'));
 $iaAtiva = $iaModo !== 'local' && (string) Env::get('DEEPSEEK_API_KEY') !== '';
 
@@ -89,9 +89,9 @@ echo '<div class="adm-container adm-container--estreito">';
 Views::pagina('Minha conta', 'Acesso ao painel da agenda.');
 Views::feedback($ok, $erro);
 
-if ($demo) {
+if ($senhaPadrao) {
     echo '<div class="adm-alerta adm-alerta--forte" role="alert">';
-    echo '  <strong>Atenção: a senha ainda é a de demonstração.</strong>';
+    echo '  <strong>Atenção: a senha ainda é a padrão.</strong>';
     echo '  Troque abaixo antes de publicar o site. O aviso some assim que a senha mudar.';
     echo '</div>';
 }
@@ -123,7 +123,7 @@ echo '<div class="adm-card">';
 echo '  <h2 class="adm-subtitulo">Agente de IA</h2>';
 echo '  <p class="adm-nota">Modo no .env: <strong>' . Helpers::escapar($iaModo) . '</strong></p>';
 echo '  <p class="adm-nota">Estado atual: <strong>'
-   . ($iaAtiva ? 'usando a DeepSeek' : 'usando o modo local da demonstração') . '</strong></p>';
+   . ($iaAtiva ? 'usando a DeepSeek' : 'usando o modo local, sem chave e sem internet') . '</strong></p>';
 echo '  <p class="adm-nota">A chave da API nunca fica visível no site: ela é lida apenas pelo PHP, no servidor.</p>';
 echo '</div>';
 

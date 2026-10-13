@@ -61,7 +61,7 @@ $mensagem = is_array($entrada) ? (string) ($entrada['mensagem'] ?? '') : '';
 if (trim($mensagem) === '') {
     Helpers::json([
         'ok'      => true,
-        'resposta' => ChatService::saudacaoInicial(),
+        'resposta' => 'Pode escrever sua dúvida aqui 😊 Respondo o que souber e o resto confirmo com o Dr. Maycon.',
         'modo'    => ChatService::modo(),
     ]);
 }

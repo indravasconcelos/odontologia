@@ -3,9 +3,8 @@
  * instalar — cria as tabelas, importa os dados iniciais e o usuario administrativo
  *
  * ---------------------------------------------------------------------
- *  LOCAL (servidor portatil)
+ *  LOCAL
  *      php database/instalar.php
- *      ou simplesmente "iniciar-demo.bat"
  *
  *  HOSTINGER
  *      Pelo TERMINAL do hPanel (SSH), nao pela web:
@@ -36,7 +35,7 @@ $viaTerminal = PHP_SAPI === 'cli';
 $podeExecutar = $viaTerminal || ($tokenEsperado !== '' && hash_equals($tokenEsperado, $tokenRecebido));
 
 // --forcar ignora o marcador .instalado. Serve para o ambiente local,
-// onde o iniciar-demo.bat reinstala a cada start.
+// onde o instalador roda de novo a cada troca de banco.
 // Nao use na hospedagem.
 $forcar = in_array('--forcar', $argv ?? [], true) || ($_GET['forcar'] ?? '') === '1';
 

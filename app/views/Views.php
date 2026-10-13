@@ -8,8 +8,8 @@ declare(strict_types=1);
 
 final class Views
 {
-    /** aviso do modo demonstracao: some quando a senha for trocada */
-    public static function senhaDemoAtiva(): bool
+    /** senha padrao ainda no ar: some quando a senha for trocada */
+    public static function senhaPadraoAtiva(): bool
     {
         if (!Session::logado()) {
             return false;
@@ -39,8 +39,8 @@ final class Views
     {
         $avisos = [];
 
-        if (self::senhaDemoAtiva()) {
-            $avisos[] = '<strong>Senha de demonstração.</strong> Antes de publicar, troque a senha em <a href="'
+        if (self::senhaPadraoAtiva()) {
+            $avisos[] = '<strong>Senha padrão.</strong> Antes de publicar, troque a senha em <a href="'
                 . Helpers::baseUrl() . '/admin/conta.php">Minha conta</a>.';
         }
 

@@ -57,7 +57,7 @@
   var form = raiz.querySelector('#chat-form');
   var campo = raiz.querySelector('#chat-campo');
   var enviar = raiz.querySelector('#chat-enviar');
-  var fechar = raiz.querySelector('#chat-fechar');
+  var botaoFechar = raiz.querySelector('#chat-fechar');
 
   var ocupado = false;
   var token = '';
@@ -65,19 +65,44 @@
   /* ---------------------------------------------------------
      token do chat: precisa vir de uma pagina do servidor
      --------------------------------------------------------- */
+  var tentativasToken = 0;
+
   function descobrirToken(callback) {
+    // Abrir o index.html pelo duplo clique (file://) não tem servidor:
+    // o PHP não roda e o navegador bloqueia o fetch por CORS. Dizer
+    // "tente de novo em instantes" aí só confunde quem está vendo a
+    // demonstração, então o motivo volta diferente.
+    if (window.location.protocol === 'file:') {
+      callback('', 'sem_servidor');
+      return;
+    }
+
     if (token) {
       callback(token);
       return;
     }
-    // sessao nova: recarrega uma pagina leve do servidor
+    // sessao nova: recarrega uma pagina leve do servidor.
+    // Uma falha de rede pontual nao deveria quebrar a visita, entao
+    // tentamos de novo antes de desistir.
     fetch('auth/sessao.php', { credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (dados) {
         token = dados && dados.token ? dados.token : '';
+        if (!token && tentativasToken < 1) {
+          tentativasToken++;
+          window.setTimeout(function () { descobrirToken(callback); }, 900);
+          return;
+        }
         callback(token);
       })
-      .catch(function () { callback(''); });
+      .catch(function () {
+        if (tentativasToken < 1) {
+          tentativasToken++;
+          window.setTimeout(function () { descobrirToken(callback); }, 900);
+          return;
+        }
+        callback('');
+      });
   }
 
   function rolar() {
@@ -90,16 +115,11 @@
     var el = document.createElement('div');
     el.className = 'chat-msg chat-msg--' + de;
 
-    if (de === 'erro') {
-      el.textContent = texto;
-      caixa.appendChild(el);
-      rolar();
-      return el;
-    }
-
     // texto simples, sem HTML vindo do servidor
     el.textContent = texto;
 
+    // o atalho do WhatsApp serve para encaminhar a conversa — e tambem
+    // para dar um caminho adiante quando o atendimento nao responde
     if (opcoes.whatsapp) {
       var link = document.createElement('a');
       link.className = 'chat-atalho';
@@ -124,32 +144,73 @@
     return el;
   }
 
-  function saudacao() {
-    return 'Olá 😊 Eu sou a assistente do consultório do Dr. Maycon Gomes. '
-      + 'Ainda fica alguma dúvida, ou você quer marcar uma avaliação?';
+  /* Tempo que os pontinhos ficam na tela. Resposta curta é rápida,
+     resposta longa leva mais tempo — como quem realmente está
+     escrevendo. Sem isso o chat responde em 100ms e parece robô. */
+  var MIN_DIGITANDO = 900;
+  var MAX_DIGITANDO = 3200;
+
+  function esperaNatural(resposta, inicio) {
+    var alvo = MIN_DIGITANDO + String(resposta).length * 18;
+    if (alvo > MAX_DIGITANDO) {
+      alvo = MAX_DIGITANDO;
+    }
+    return Math.max(0, alvo - (Date.now() - inicio));
   }
 
   /* ---------------------------------------------------------
      abrir e fechar
      --------------------------------------------------------- */
-  function abrir(pergunta) {
+  var BOAS_VINDAS = 'Olá! Seja bem-vindo(a) ao atendimento do Dr. Maycon Gomes! 😊\n\n'
+    + 'Estou aqui para ajudar você com suas dúvidas e agendar sua avaliação '
+    + 'odontológica.\n\nComo posso ajudar?';
+
+  // As duas rotas do atendimento. Os botões só encaminham a conversa:
+  // o texto vira mensagem do paciente e passa pelo mesmo caminho de
+  // sempre, sem um fluxo paralelo.
+  var OPCOES = ['Tenho dúvidas', 'Quero agendar uma avaliação'];
+
+  function mostrarOpcoes(balao) {
+    var grupo = document.createElement('div');
+    grupo.className = 'chat-opcoes';
+
+    OPCOES.forEach(function (rotulo) {
+      var botao = document.createElement('button');
+      botao.type = 'button';
+      botao.className = 'chat-opcao';
+      botao.textContent = rotulo;
+      botao.addEventListener('click', function () { enviarMensagem(rotulo); });
+      grupo.appendChild(botao);
+    });
+
+    balao.appendChild(grupo);
+    rolar();
+  }
+
+  // Somem assim que o paciente fala qualquer coisa: escolher opção
+  // depois de já ter perguntado reiniciaria o atendimento.
+  function esconderOpcoes() {
+    var grupos = caixa.querySelectorAll('.chat-opcoes');
+    for (var i = 0; i < grupos.length; i++) {
+      grupos[i].parentNode.removeChild(grupos[i]);
+    }
+  }
+
+  function abrir() {
     painel.hidden = false;
     painel.classList.remove('is-closing');
     fab.hidden = true;
     fab.setAttribute('aria-expanded', 'true');
 
-    if (caixa.childElementCount === 0) {
-      adicionar(saudacao(), 'agente');
+    // Boas-vindas só na conversa nova: se a caixa já tem balão, é a
+    // mesma conversa e a saudação não se repete.
+    if (caixa.children.length === 0) {
+      mostrarOpcoes(adicionar(BOAS_VINDAS, 'agente'));
     }
 
-    if (pergunta) {
-      window.setTimeout(function () {
-        enviarMensagem(pergunta);
-        campo.focus();
-      }, 420);
-    } else {
-      campo.focus();
-    }
+    // A assistente fala uma vez e espera. Nada de mandar pergunta
+    // sozinha no lugar do paciente: quem conduz a conversa é ele.
+    campo.focus();
   }
 
   function fechar() {
@@ -173,19 +234,29 @@
     }
 
     adicionar(mensagem, 'visitante');
+    esconderOpcoes();
     ocupado = true;
     campo.value = '';
     campo.style.height = 'auto';
     atualizarBotao();
 
     var digitando = mostrarDigitando();
+    var inicio = Date.now();
 
-    descobrirToken(function (tk) {
+    descobrirToken(function (tk, motivo) {
       if (!tk) {
         digitando.remove();
         ocupado = false;
         atualizarBotao();
-        adicionar('Não consegui abrir o atendimento agora. Tente de novo em instantes.', 'erro');
+
+        if (motivo === 'sem_servidor') {
+          adicionar('Esse chat precisa do site aberto pelo servidor, e não pelo arquivo direto. '
+            + 'Abra http://localhost:8080 no navegador e recarregue a página.', 'erro');
+          return;
+        }
+
+        adicionar('Não consegui abrir o atendimento agora. Tente de novo em instantes — '
+          + 'ou fale com o Dr. Maycon direto pelo WhatsApp.', 'erro', { whatsapp: true });
         return;
       }
 
@@ -203,31 +274,35 @@
           return r.json();
         })
         .then(function (dados) {
-          digitando.remove();
-          ocupado = false;
-          atualizarBotao();
+          window.setTimeout(function () {
+            digitando.remove();
+            ocupado = false;
+            atualizarBotao();
 
-          if (!dados || !dados.resposta) {
-            adicionar('Não consegui responder agora. Pode tentar de novo?', 'erro');
-            return;
-          }
+            if (!dados || !dados.resposta) {
+              adicionar('Não consegui responder agora. Pode tentar de novo?', 'erro');
+              return;
+            }
 
-          var resposta = dados.resposta || '';
+            var resposta = dados.resposta || '';
 
-          // o atalho do WhatsApp aparece quando a assistente
-          // encaminha a conversa para o atendimento humano
-          var encaminha = /Prefiro te encaminhar|encaminhar para o Dr\. Maycon|falar direto/i.test(resposta);
+            // o atalho do WhatsApp aparece quando a assistente entrega o
+            // número: faz sentido abrir a conversa direto, sem copiar
+            var encaminha = /Prefiro te encaminhar|encaminhar para o Dr\. Maycon|falar direto|\(69\) 99988-0560/i.test(resposta);
 
-          adicionar(resposta, 'agente', { whatsapp: encaminha });
+            adicionar(resposta, 'agente', { whatsapp: encaminha });
 
-          campo.focus();
+            campo.focus();
+          }, esperaNatural((dados && dados.resposta) || '', inicio));
         })
         .catch(function () {
-          digitando.remove();
-          ocupado = false;
-          atualizarBotao();
-          adicionar('Ops, deu uma falha na conexão. Tente novamente — ou fale com a gente no '
-            + 'WhatsApp (69) 99988-0560.', 'erro');
+          window.setTimeout(function () {
+            digitando.remove();
+            ocupado = false;
+            atualizarBotao();
+            adicionar('Ops, deu uma falha na conexão. Tente novamente — ou fale com a gente no '
+              + 'WhatsApp (69) 99988-0560.', 'erro');
+          }, esperaNatural('', inicio));
         });
     });
   }
@@ -239,8 +314,8 @@
   /* ---------------------------------------------------------
      eventos
      --------------------------------------------------------- */
-  fab.addEventListener('click', function () { abrir(''); });
-  fechar.addEventListener('click', fechar);
+  fab.addEventListener('click', function () { abrir(); });
+  botaoFechar.addEventListener('click', function () { fechar(); });
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
@@ -267,16 +342,17 @@
   });
 
   /* ---------------------------------------------------------
-     botoes do site que passam a abrir o chat
-     data-chat-pergunta  = pergunta inicial
+     botoes do site que abrem o chat
+     data-chat-pergunta so marca quais botoes abrem: o texto que
+     estava no atributo nao e mais disparado. A assistente espera
+     o paciente conduzir.
      --------------------------------------------------------- */
   document.addEventListener('click', function (e) {
-    var alvo = e.target.closest('[data-chat-pergunta]');
-    if (!alvo) {
+    if (!e.target.closest('[data-chat-pergunta]')) {
       return;
     }
     e.preventDefault();
-    abrir(alvo.getAttribute('data-chat-pergunta') || '');
+    abrir();
   });
 
   ajustar();

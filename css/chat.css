@@ -253,6 +253,36 @@
   background: var(--surface-soft);
 }
 
+/* opções de abertura — só na primeira mensagem da conversa */
+.chat-opcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.6rem;
+}
+
+.chat-opcao {
+  padding: 0.5rem 0.85rem;
+  border-radius: 11px;
+  background: #fff;
+  border: 1px solid rgba(15, 187, 169, 0.55);
+  color: #0a7a6e;
+  font: inherit;
+  font-size: 0.83rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-opcao:hover {
+  background: var(--surface-soft);
+}
+
+.chat-opcao:focus-visible {
+  outline: 2px solid rgba(15, 187, 169, 0.7);
+  outline-offset: 2px;
+}
+
 /* ---------------- campo ---------------- */
 .chat-form {
   display: flex;
