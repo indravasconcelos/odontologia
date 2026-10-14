@@ -42,9 +42,39 @@
 
   /* Gradientes */
   --grad-accent: linear-gradient(120deg, var(--teal-500), var(--blue-500));
+
+  /* Fundo escuro: os dois focos de luz ja existentes, mais um terceiro
+     bem aberto no centro. Esse ultimo e o que da volume ao meio da
+     tela -- sem ele o navy vira um retangulo chapado na parte de
+     baixo das secoes escuras. */
   --grad-dark: radial-gradient(1200px 600px at 85% -10%, rgba(20, 214, 196, 0.16), transparent 60%),
                radial-gradient(900px 520px at -10% 110%, rgba(46, 123, 232, 0.14), transparent 60%),
+               radial-gradient(760px 470px at 46% 40%, rgba(22, 64, 111, 0.55), transparent 74%),
                linear-gradient(180deg, var(--navy-900), var(--navy-950));
+
+  /* Fundo claro: mesma base de sempre, com os dois focos de luz da
+     paleta (teal e azul) abertos em cantos opostos. A intensidade fica
+     em torno de 5% de alpha, entao a cor continua sendo o branco e o
+     cinza claro do site -- a leitura nao muda. */
+  --grad-surface:
+    radial-gradient(1050px 500px at 12% -12%, rgba(20, 214, 196, 0.055), transparent 62%),
+    radial-gradient(920px 470px at 92% 114%, rgba(46, 123, 232, 0.05), transparent 60%),
+    linear-gradient(180deg, #ffffff 0%, var(--surface-alt) 56%, #fbfdff 100%);
+
+  /* Fundo alternativo: a mesma leitura, saindo do #f4f8fb e chegando
+     no #eef4f9 no meio do bloco. A variacao de luminosidade e o que
+     separa as secoes sem precisar de borda desenhada. */
+  --grad-surface-alt:
+    radial-gradient(1000px 500px at 88% -10%, rgba(20, 214, 196, 0.065), transparent 60%),
+    radial-gradient(860px 450px at 6% 112%, rgba(46, 123, 232, 0.055), transparent 58%),
+    linear-gradient(180deg, var(--surface-alt) 0%, var(--surface-soft) 50%, var(--surface-alt) 100%);
+
+  /* Textura: pontilhado de 1px em intervalos de 24px. No alpha atual
+     (2.8%) ele nao aparece como padrao -- aparece como um leve granulado
+     que impede o fundo claro de ficar vitrine. Vai sempre como ultima
+     camada, por cima da base e sob os focos de luz. */
+  --tex-dots: radial-gradient(circle at center, rgba(7, 27, 51, 0.028) 1px, transparent 1.4px);
+  --tex-size: 24px 24px;
 
   /* Tipografia */
   --font-display: "Sora", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -203,9 +233,22 @@ p { text-wrap: pretty; }
   padding-block: var(--section-y);
   position: relative;
   scroll-margin-top: calc(var(--header-h) + 8px);
+  /* Ordem: sombra de topo (separacao entre blocos), pontilhado e base.
+     A sombra nao e uma borda: e um degradue de 90px que faz o bloco
+     anterior "assentar" no proximo, em vez de dois retangulos colados. */
+  background:
+    linear-gradient(180deg, rgba(7, 27, 51, 0.05) 0, rgba(7, 27, 51, 0) 90px),
+    var(--tex-dots) 0 0 / var(--tex-size) repeat,
+    var(--grad-surface);
 }
 
-.section-alt { background: var(--surface-alt); }
+.section-alt {
+  /* mesma sombra de topo, no tom do bloco alternativo */
+  background:
+    linear-gradient(180deg, rgba(7, 27, 51, 0.045) 0, rgba(7, 27, 51, 0) 90px),
+    var(--tex-dots) 0 0 / var(--tex-size) repeat,
+    var(--grad-surface-alt);
+}
 
 .section-head {
   margin-bottom: clamp(2.5rem, 5vw, 3.75rem);
@@ -226,7 +269,12 @@ p { text-wrap: pretty; }
 
 /* Fundos escuros */
 .dark {
-  background: var(--grad-dark);
+  /* mesma logica do bloco claro: separacao no topo, depois o degradue
+     escuro. A separacao aqui e clara (rgba branco) porque o bloco
+     anterior costuma ser claro e o corte apareceria reto. */
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0, rgba(255, 255, 255, 0) 90px),
+    var(--grad-dark);
   color: var(--on-dark-soft);
 }
 

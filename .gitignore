@@ -26,6 +26,9 @@ database/.instalado
 Thumbs.db
 desktop.ini
 
+# Pacote de publicacao (gerado a mao, nao versionado)
+public_html-hostinger.zip
+
 # Editores
 .vscode/
 .idea/

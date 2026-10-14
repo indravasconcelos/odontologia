@@ -68,6 +68,28 @@ final class ChatService
             );
         }
 
+        // Gemini: so para teste. Mesmo caminho do DeepSeek — se
+        // falhar, o visitante cai no respondedor local.
+        if ($modo === 'gemini' && Gemini::disponivel()) {
+            $resultado = Gemini::conversar($historico, $estado);
+
+            if ($resultado['ok']) {
+                self::gravar($historico, ['role' => 'assistant', 'content' => $resultado['texto']]);
+                self::gravarEstado($estado);
+                AgenteLog::mensagem(
+                    'modo=gemini resposta=' . self::resumir($resultado['texto']),
+                    (string) ($estado['nome'] ?? '')
+                );
+
+                return ['ok' => true, 'texto' => $resultado['texto'], 'modo' => 'gemini'];
+            }
+
+            AgenteLog::mensagem(
+                'gemini falhou: ' . (string) $resultado['erro'],
+                (string) ($estado['nome'] ?? '')
+            );
+        }
+
         $resultado = Fallback::responder($mensagem, $estado);
 
         self::gravar($historico, ['role' => 'assistant', 'content' => $resultado['texto']]);
@@ -81,7 +103,7 @@ final class ChatService
         $modo = strtolower(trim((string) Env::get('AI_MODO', 'auto')));
         $modo = strtr($modo, ['à' => 'a', 'ã' => 'a', 'á' => 'a']);
 
-        $validos = ['auto', 'deepseek', 'local', 'desligado'];
+        $validos = ['auto', 'deepseek', 'gemini', 'local', 'desligado'];
         if (!in_array($modo, $validos, true)) {
             $modo = 'auto';
         }
@@ -91,6 +113,11 @@ final class ChatService
         }
 
         if ($modo === 'deepseek' && !DeepSeek::disponivel()) {
+            return 'local';
+        }
+
+        // Gemini so para teste: sem chave, cai no local igual.
+        if ($modo === 'gemini' && !Gemini::disponivel()) {
             return 'local';
         }
 

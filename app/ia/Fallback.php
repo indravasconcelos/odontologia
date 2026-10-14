@@ -142,9 +142,10 @@ final class Fallback
     }
 
     /**
-     * Corta o convite de agendamento no fim de uma resposta. Depois que
-     * o agendamento já foi concluído, esse convite é ruído — a pessoa
-     * só fez uma pergunta avulsa.
+     * Corta o convite de agendamento no fim de uma resposta. A pessoa
+     * perguntou preço, endereço ou horário: quer a resposta, não uma
+     * nova oferta de avaliação a cada mensagem. O convite de abertura
+     * continua — ele vem da saudação, que retorna antes daqui.
      */
     private static function semConviteDeAgendamento(string $texto): string
     {
@@ -160,6 +161,16 @@ final class Fallback
         foreach ($finais as $fim) {
             $texto = str_replace($fim, '', $texto);
         }
+
+        // Qualquer outro convite solto no fim também sai. Sem isto,
+        // "Quer marcar em um desses dias?" ou "Quer marcar?" voltavam
+        // depois de toda resposta de dúvida.
+        $texto = (string) preg_replace(
+            '/\s+(?:Quer marcar[^?]*\?|Posso marcar[^?]*\?|Posso ajudar com mais[^?]*\?'
+            . '|Quer que eu veja[^?]*\?)\s*$/u',
+            '',
+            $texto
+        );
 
         return rtrim($texto);
     }
@@ -381,8 +392,20 @@ final class Fallback
         }
 
         $nome = self::extrairNome($texto);
+
+        // A pessoa pode mandar o dia antes do nome ("18/10, Indra").
+        // Guarda o dia e segue pedindo o nome; sem isso, a data era
+        // descartada e a agenda oferecia o próximo horário qualquer.
+        $diaDito = self::interpretarDia($norm);
+        if ($diaDito !== null) {
+            $estado['data'] = $diaDito;
+        }
+
         if ($nome === null) {
-            return ['ok' => true, 'texto' => 'Como posso te chamar? Preciso do nome e sobrenome.'];
+            $jaTemDia = ($estado['data'] ?? '') !== '';
+            return ['ok' => true, 'texto' => $jaTemDia
+                ? 'Anotado o dia 😊 Agora me diz seu nome, sobrenome e telefone, por favor.'
+                : 'Como posso te chamar? Preciso do nome e sobrenome.'];
         }
 
         $estado['nome'] = $nome;
@@ -399,9 +422,12 @@ final class Fallback
             $estado['servico'] = $servico['titulo'];
         }
 
-        // se ela já disse o dia, respeita o que ela pediu
-        $dia = self::interpretarDia($norm);
-        if ($dia !== null) {
+        // se ela já disse o dia (nesta mensagem ou antes), respeita.
+        // O estado nasce com data = '' (string vazia), e o ?? só cai
+        // no fallback quando o valor é null — por isso compara o vazio.
+        $diaSalvo = trim((string) ($estado['data'] ?? ''));
+        $dia = $diaSalvo !== '' ? $diaSalvo : self::interpretarDia($norm);
+        if ($dia !== null && $dia !== '') {
             return self::montarDisponibilidade($dia, $estado);
         }
 
@@ -515,6 +541,14 @@ final class Fallback
             AgenteLog::registrar('criar_agendamento', ['local'], $resultado, (string) ($estado['nome'] ?? ''));
 
             if (!$resultado['ok']) {
+                // faltou o telefone: a conversa volta para o nome, não
+                // para o horario — senao o visitante escolhe outro horario
+                // e a marcacao continua falhando pelo mesmo motivo.
+                if (str_contains($resultado['texto'], 'telefone')) {
+                    $estado['etapa'] = 'aguardando_nome';
+                    return ['ok' => true, 'texto' => 'Só falta o telefone com DDD para eu conseguir confirmar a consulta pelo WhatsApp. Me passa, por favor?'];
+                }
+
                 $estado['etapa'] = 'aguardando_dia';
                 return ['ok' => true, 'texto' => 'Deu um problema aqui: ' . $resultado['texto']
                     . ' Posso tentar outro horário?'];
@@ -751,7 +785,7 @@ final class Fallback
 
         return ['ok' => true, 'texto' => ($nome !== '' ? $nome . ', ' : '')
             . 'na agenda encontrei ' . Helpers::dataExtenso((string) $estado['data'])
-            . ' às ' . $hora . '. Posso agendar aí?'];
+            . ' às ' . $hora . '. Posso agendar?'];
     }
 
     /**
@@ -1060,9 +1094,18 @@ final class Fallback
         }
 
         $querMarcar = str_contains($norm, 'marcar') || str_contains($norm, 'agendar')
-            || str_contains($norm, 'disponivel') || str_contains($norm, 'vaga');
+            || str_contains($norm, 'disponivel') || str_contains($norm, 'vaga')
+            || str_contains($norm, 'tem') || str_contains($norm, 'tem horario')
+            || str_contains($norm, 'da') || str_contains($norm, 'pra');
 
-        return !$querMarcar;
+        // "tem horario pra amanha as 10" é pedido de vaga, não pergunta
+        // de funcionamento. Se citou dia ou hora, é agendamento.
+        $citouDiaHora = self::interpretarDia($norm) !== null
+            || preg_match('/\b\d{1,2}[:h]\d{0,2}\b/', $norm) === 1
+            || preg_match('/\bas\s*\d{1,2}\b/', $norm) === 1
+            || str_contains($norm, 'amanha') || str_contains($norm, 'hoje');
+
+        return !$querMarcar && !$citouDiaHora;
     }
 
     /**
@@ -1224,6 +1267,13 @@ final class Fallback
             return null;
         }
 
+        // Data ou hora não é nome. Quem manda "18/10/2026" no meio do
+        // agendamento quer marcar, não se apresentar — e aceitar isso
+        // como nome criava paciente com nome de data.
+        if (preg_match('/\b\d{1,2}[\s\/\-.:]\d{1,2}([\s\/\-.:]\d{2,4})?\b/', $texto) === 1) {
+            return null;
+        }
+
         // tira saudações comuns do começo
         $limpa = preg_replace(
             '/^(oi|ol[áa]|opa|e a[ií]|bom dia|boa tarde|boa noite)\s*[!,.]?\s*/iu',
@@ -1347,8 +1397,14 @@ final class Fallback
             return date('Y-m-d', strtotime('+2 days', $hoje));
         }
 
-        if (preg_match('/(\d{1,2})\/(\d{1,2})/', $norm, $m) === 1) {
-            $ano = (int) date('Y');
+        // A normalização troca a barra por espaço, então "18/10/2026"
+        // chega aqui como "18 10 2026". O separador precisa aceitar
+        // barra, espaço e hífen, senão nenhuma data escrita pelo
+        // visitante é entendida.
+        if (preg_match('/(\d{1,2})[\s\/\-](\d{1,2})(?:[\s\/\-](\d{2,4}))?/', $norm, $m) === 1) {
+            $ano = isset($m[3]) && $m[3] !== ''
+                ? (strlen($m[3]) === 2 ? 2000 + (int) $m[3] : (int) $m[3])
+                : (int) date('Y');
             $data = sprintf('%04d-%02d-%02d', $ano, (int) $m[2], (int) $m[1]);
             if (Helpers::dataValida($data) && $data >= date('Y-m-d')) {
                 return $data;

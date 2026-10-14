@@ -318,6 +318,53 @@ final class Knowledge
             'ç' => 'c', 'ñ' => 'n',
         ]);
         $texto = preg_replace('/[^a-z0-9\s:]/', ' ', $texto) ?? $texto;
-        return trim(preg_replace('/\s+/', ' ', $texto) ?? $texto);
+        $texto = trim(preg_replace('/\s+/', ' ', $texto) ?? $texto);
+
+        return self::expandirAbreviacoes($texto);
+    }
+
+    /**
+     * Expande siglas e palavras cortadas que a pessoa digita no chat.
+     * Sem isto, "td bem", "pq", "blz" ou "avaliac" não casavam com
+     * nada e caíam no "não tenho essa informação".
+     *
+     * Troca só palavras inteiras, para não cortar uma data ou hora.
+     */
+    private static function expandirAbreviacoes(string $norm): string
+    {
+        if ($norm === '') {
+            return $norm;
+        }
+
+        $mapa = [
+            // siglas comuns de conversa
+            'td' => 'tudo', 'tudo bem' => 'tudo bem', 'tb' => 'tambem',
+            'tbm' => 'tambem', 'pq' => 'porque', 'q' => 'que',
+            'vc' => 'voce', 'vcs' => 'voces', 'blz' => 'beleza',
+            'obg' => 'obrigado', 'vlw' => 'valeu', 'msg' => 'mensagem',
+            'tel' => 'telefone', 'whats' => 'whatsapp', 'qro' => 'quero',
+            'qr' => 'quero', 'agr' => 'agora', 'hj' => 'hoje',
+            'amanha' => 'amanha', 'pls' => 'por favor', 'pfv' => 'por favor',
+            'nd' => 'nada', 'n' => 'nao', 'nn' => 'nao',
+            // palavras cortadas de odonto / agendamento
+            'avaliac' => 'avaliacao', 'avali' => 'avaliacao',
+            'agend' => 'agendar', 'agendamento' => 'agendamento',
+            'marc' => 'marcar', 'cancel' => 'cancelar',
+            'remarc' => 'remarcar', 'end' => 'endereco',
+            'dent' => 'dente', 'aparelh' => 'aparelho',
+            'canal' => 'canal', 'clareament' => 'clareamento',
+            'clareament' => 'clareamento', 'limpez' => 'limpeza',
+            'restauraca' => 'restauracao', 'protes' => 'protese',
+            'conveni' => 'convenio', 'pagament' => 'pagamento',
+        ];
+
+        $palavras = explode(' ', $norm);
+        foreach ($palavras as $i => $p) {
+            if (isset($mapa[$p])) {
+                $palavras[$i] = $mapa[$p];
+            }
+        }
+
+        return implode(' ', $palavras);
     }
 }

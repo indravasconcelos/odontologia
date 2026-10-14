@@ -112,6 +112,7 @@
 
   if (lightbox) {
     var lbImg = lightbox.querySelector('.lightbox-img');
+    var lbVideo = lightbox.querySelector('.lightbox-video');
     var lbCaption = lightbox.querySelector('.lightbox-caption');
     var lbCounter = lightbox.querySelector('.lb-counter');
     var lbPrev = lightbox.querySelector('.lb-prev');
@@ -126,15 +127,39 @@
       );
     }
 
+    /* limpa o video: sem isso o som continua tocando depois de sair */
+    function resetVideo() {
+      if (!lbVideo) return;
+      lbVideo.pause();
+      lbVideo.removeAttribute('src');
+      lbVideo.hidden = true;
+      lbVideo.load();
+    }
+
     function render() {
       var item = currentGroup[currentIndex];
       if (!item) return;
       var src = item.getAttribute('data-src');
       var caption = item.getAttribute('data-caption') || '';
       var innerImg = item.querySelector('img');
+      // depoimentos em video chegam por data-video; a galeria de fotos
+      // continua usando data-src, sem mudanca de comportamento
+      var videoSrc = item.getAttribute('data-video');
 
-      lbImg.src = src;
-      lbImg.alt = (innerImg && innerImg.alt) || caption;
+      if (videoSrc) {
+        lbImg.hidden = true;
+        lbImg.removeAttribute('src');
+        lbVideo.hidden = false;
+        if (lbVideo.getAttribute('src') !== videoSrc) {
+          lbVideo.src = videoSrc;
+        }
+      } else {
+        resetVideo();
+        lbImg.hidden = false;
+        lbImg.src = src;
+        lbImg.alt = (innerImg && innerImg.alt) || caption;
+      }
+
       lbCaption.textContent = caption;
       // sem legenda a figura nao fica com uma linha vazia embaixo
       lbCaption.hidden = !caption;
@@ -162,6 +187,7 @@
     function closeLightbox() {
       lightbox.hidden = true;
       document.body.classList.remove('lightbox-open');
+      resetVideo();
       lbImg.src = '';
       if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
     }
@@ -479,40 +505,261 @@
     casesUpdate();
   }
 
-  /* ---------------- Depoimentos: fita automática (direita -> esquerda) ---- */
-  var depTrack = document.querySelector('.dep-track');
+  /* ---------------- Depoimentos em vídeo (leque) ----------------
 
-  if (depTrack) {
-    var depCards = Array.prototype.slice.call(depTrack.querySelectorAll('.dep-card'));
+   REGISTRO DOS DEPOIMENTOS
+   -------------------------
+   Este é o único lugar do site onde se cadastra um vídeo. A estrutura
+   foi montada para 5 ou mais: até dois de cada lado cabem no arco e os
+   demais ficam atrás, esperando a vez.
 
-    // duas cópias idênticas: assim -50% do transform cai exatamente no
-    // ponto de partida e o loop volta sem dar "pulo"
-    depCards.forEach(function (card) {
-      var clone = card.cloneNode(true);
-      clone.setAttribute('aria-hidden', 'true');
-      depTrack.appendChild(clone);
+   Para publicar um depoimento, acrescente um objeto ao array:
+
+     {
+       url:  'assets/depoimento-01.mp4',     // o arquivo de vídeo
+       thumb:'assets/depoimento-01.jpg',     // miniatura (opcional)
+       nome: 'Nome do paciente',             // opcional: só se ele
+                                              // autorizar a publicação
+       legenda: 'Depoimento da paciente Ana' // opcional, aparece no modal
+     }
+
+   Sem `thumb`, o card mostra uma moldura discreta do próprio
+   consultório — nunca uma imagem de banco.
+   Sem `nome`, o card não mostra nome nenhum.
+   Enquanto o array estiver vazio, a seção exibe o estado vazio.
+
+   Formatos previstos: .mp4 (H.264) e .webm, gravados em celular.
+   O player usa 'contain' para não cortar o rosto em vídeos verticais.
+
+   */
+  var DEPOIMENTOS_VIDEO = [
+    // { url: 'assets/depoimento-01.mp4', thumb: 'assets/depoimento-01.jpg', nome: 'Nome autorizado', legenda: 'Depoimento' },
+    // { url: 'assets/depoimento-02.mp4' },
+    // { url: 'assets/depoimento-03.mp4', thumb: 'assets/depoimento-03.jpg' },
+    // { url: 'assets/depoimento-04.mp4' },
+    // { url: 'assets/depoimento-05.mp4', nome: 'Nome autorizado' }
+  ];
+
+  /* Quantas cartas o leque mostra enquanto nao ha video cadastrado.
+     Sao lugares vagos, sem nome e sem imagem: apenas o formato do
+     card pronto para receber o video real. Assim a secao ja aparece
+     pronta e o leque pode ser conferido antes de gravar nada. */
+  var VAGOS_PADRAO = 5;
+
+  (function montarDepoimentosVideo() {
+    var leque = document.getElementById('depoimentos-video');
+    var palco = document.getElementById('depoimentos-palco');
+
+    if (!leque || !palco) return;
+
+    var validos = DEPOIMENTOS_VIDEO.filter(function (v) { return v && v.url; });
+    var lista = validos.length ? validos : new Array(VAGOS_PADRAO).fill(null);
+
+    lista.forEach(function (video, i) {
+      var card = document.createElement('figure');
+      card.className = 'vid-dep';
+      // data-lightbox reaproveita o modal que já existe na galeria
+      card.setAttribute('data-lightbox', 'depoimentos-video');
+      card.setAttribute('data-caption', (video && video.legenda) || '');
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('role', 'button');
+
+      // sem video cadastrado a carta e um lugar vago: nao abre modal
+      if (video) {
+        card.setAttribute('data-video', video.url);
+        var nomeVideo = String(video.nome || '').trim();
+        if (nomeVideo) card.setAttribute('aria-label', 'Assistir ao depoimento de ' + nomeVideo);
+        else card.setAttribute('aria-label', 'Assistir ao depoimento');
+      } else {
+        card.setAttribute('data-vago', '1');
+        card.setAttribute('aria-label', 'Espaço reservado para um depoimento em vídeo');
+      }
+
+      var mid = document.createElement('div');
+      mid.className = 'vid-dep-mid';
+
+      if (video && video.thumb) {
+        var img = document.createElement('img');
+        img.className = 'vid-dep-thumb';
+        img.src = video.thumb;
+        img.alt = '';
+        img.loading = 'lazy';
+        if (window.imgFallback) img.onerror = function () { window.imgFallback(this); };
+        mid.appendChild(img);
+      } else {
+        // sem miniatura: moldura discreta do próprio consultório.
+        // nunca uma imagem de banco nem card quebrado.
+        var moldura = document.createElement('div');
+        moldura.className = 'vid-dep-sem-thumb';
+        mid.appendChild(moldura);
+      }
+
+      var play = document.createElement('span');
+      play.className = 'vid-dep-play';
+      play.innerHTML =
+        '<span class="vid-dep-play-icone" aria-hidden="true">'
+        + '<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">'
+        + '<path d="M8 5.5v13l11-6.5-11-6.5Z"/></svg>'
+        + '</span>'
+        + '<span class="vid-dep-play-texto">'
+        + (video ? 'Assistir' : 'Em breve') + '</span>';
+      mid.appendChild(play);
+      card.appendChild(mid);
+
+      // o nome só entra no card quando o paciente autorizou a publicação
+      var nome = video ? String(video.nome || '').trim() : '';
+      if (nome) {
+        var fig = document.createElement('figcaption');
+        fig.className = 'vid-dep-nome';
+        fig.textContent = nome;
+        card.appendChild(fig);
+      }
+
+      palco.appendChild(card);
     });
 
-    // velocidade fixa em px/s — a duração acompanha o tamanho da fita
-    function depVelocidade() {
-      var metade = depTrack.scrollWidth / 2;
-      depTrack.style.animationDuration = Math.round(metade / 60) + 's';
+    var cards = Array.prototype.slice.call(palco.querySelectorAll('.vid-dep'));
+    var nav = document.getElementById('depoimentos-nav');
+    var total = cards.length;
+    var atual = 0;
+
+    /* Indicadores em forma de lente: um para cada video. O que esta na
+       frente cresce e acende em teal; os outros ficam pequenos e
+       apagados. Clicar em um traz o video dele para a frente. */
+    if (nav) {
+      nav.textContent = '';
+      cards.forEach(function (card, i) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'vid-dep-ponto';
+        b.setAttribute('data-ponto', String(i));
+        b.setAttribute('aria-label', 'Ir para o depoimento ' + (i + 1));
+        // lente vertical: as duas pontas em cima e embaixo
+        b.innerHTML = '<svg viewBox="0 0 24 64" aria-hidden="true" focusable="false">'
+          + '<path d="M12 0C22.5 18 22.5 46 12 64 1.5 46 1.5 18 12 0Z"/></svg>';
+        nav.appendChild(b);
+      });
     }
 
-    depVelocidade();
-    window.addEventListener('resize', depVelocidade);
+    var pontos = nav ? Array.prototype.slice.call(nav.querySelectorAll('.vid-dep-ponto')) : [];
 
-    // fora da tela a animação para, para não gastar render à toa
-    if ('IntersectionObserver' in window) {
-      var depObserver = new IntersectionObserver(function (entradas) {
-        entradas.forEach(function (entrada) {
-          depTrack.classList.toggle('is-off', !entrada.isIntersecting);
-        });
-      }, { threshold: 0 });
-
-      depObserver.observe(depTrack);
+    /* Quantas cartas cabem de cada lado do arco. Quem manda e o CSS
+       (--fan-janela), para o leque fechar no celular sem repetir a
+       conta aqui. */
+    function lerJanela() {
+      var pedida = parseInt(
+        window.getComputedStyle(leque).getPropertyValue('--fan-janela'), 10
+      );
+      if (isNaN(pedida)) pedida = 2;
+      return Math.max(0, Math.min(pedida, Math.floor((total - 1) / 2)));
     }
-  }
+
+    /* Posicao no arco com volta: negativo e a esquerda, 0 a carta da
+       frente. O que passa da janela e esconde. */
+    function distancia(i) {
+      var d = (i - atual + total) % total;
+      if (d > total / 2) d -= total;
+      return d;
+    }
+
+    function girar() {
+      var janela = lerJanela();
+
+      cards.forEach(function (card, i) {
+        var d = distancia(i);
+        var ad = Math.abs(d);
+
+        card.style.setProperty('--d', d);
+        card.style.setProperty('--ad', ad);
+
+        if (ad > janela) {
+          card.setAttribute('data-fora', '1');
+          card.setAttribute('aria-hidden', 'true');
+          card.setAttribute('tabindex', '-1');
+        } else {
+          card.removeAttribute('data-fora');
+          card.removeAttribute('aria-hidden');
+          card.setAttribute('tabindex', '0');
+        }
+
+        card.classList.toggle('vid-dep--frente', d === 0);
+      });
+
+      pontos.forEach(function (p, i) {
+        p.classList.toggle('is-ativo', i === atual);
+      });
+    }
+
+    function irPara(i) {
+      atual = ((i % total) + total) % total;
+      girar();
+    }
+
+    function passar(passo) {
+      irPara(atual + passo);
+    }
+
+    if (nav) {
+      nav.addEventListener('click', function (e) {
+        var ponto = e.target.closest('[data-ponto]');
+        if (!ponto) return;
+        e.preventDefault();
+        irPara(parseInt(ponto.getAttribute('data-ponto'), 10) || 0);
+      });
+    }
+
+    leque.addEventListener('click', function (e) {
+      // setas do rodape: passam de um depoimento para o outro
+      var seta = e.target.closest('[data-viddep]');
+      if (seta) {
+        e.preventDefault();
+        passar(seta.getAttribute('data-viddep') === 'prev' ? -1 : 1);
+        return;
+      }
+
+      // clicar numa carta do fundo a traz para a frente
+      var card = e.target.closest('.vid-dep');
+      if (!card) return;
+      var i = cards.indexOf(card);
+      if (i > -1 && i !== atual) irPara(i);
+    });
+
+    // arrastar com o dedo tambem passa de um para o outro
+    var toqueX = null;
+
+    function noToque(e) {
+      toqueX = e.touches[0].clientX;
+    }
+
+    function noSoltar(e) {
+      if (toqueX === null) return;
+      var fim = e.changedTouches[0].clientX;
+      var dx = fim - toqueX;
+      toqueX = null;
+      // so conta arrasto de verdade: 40px evita virar troca por engano
+      if (Math.abs(dx) < 40) return;
+      passar(dx < 0 ? 1 : -1);
+    }
+
+    palco.addEventListener('touchstart', noToque, { passive: true });
+    palco.addEventListener('touchend', noSoltar, { passive: true });
+    palco.addEventListener('touchcancel', function () { toqueX = null; }, { passive: true });
+
+    // teclado: as setas do teclado giram o leque quando o foco está nele
+    leque.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowLeft') { e.preventDefault(); passar(-1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); passar(1); }
+    });
+
+    girar();
+
+    // girar a tela muda a janela do arco: recalcula o que aparece
+    var relogio;
+    window.addEventListener('resize', function () {
+      window.clearTimeout(relogio);
+      relogio = window.setTimeout(girar, 150);
+    });
+  })();
 
   /* O hero tem três loops decorativos permanentes (blob, anel e as fichas
      flutuantes). Animação fora da tela é render gasto à toa, então eles

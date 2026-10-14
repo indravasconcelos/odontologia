@@ -1,6 +1,6 @@
 /* =========================================================
-   ESTILOS — seções, componentes e responsivo
-   Dr. Maycon Gomes · Cirurgião-Dentista
+   ESTILOS â€” seÃ§Ãµes, componentes e responsivo
+   Dr. Maycon Gomes Â· CirurgiÃ£o-Dentista
    ========================================================= */
 
 /* ============================ HEADER ============================ */
@@ -63,9 +63,8 @@
 }
 
 .brand-mark--logo {
-  background: #000;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
-  overflow: hidden;
+  background: transparent;
+  box-shadow: 0 10px 26px rgba(4, 16, 31, 0.35);
 }
 
 .brand-mark--logo img {
@@ -97,7 +96,7 @@
 .site-header.is-scrolled .brand-text strong { color: var(--ink-900); }
 .site-header.is-scrolled .brand-text small { color: var(--ink-400); }
 
-/* Navegação */
+/* NavegaÃ§Ã£o */
 .nav {
   display: flex;
   align-items: center;
@@ -123,34 +122,48 @@
   transition: color 0.3s var(--ease), background-color 0.3s var(--ease);
 }
 
+/* Marca da seção ativa: um ponto teal com halo suave. O antigo ícone de
+   dente pesava demais no header e competia com o texto do item. */
 .nav-list a::after {
   content: "";
   position: absolute;
   left: 50%;
   bottom: 0.22rem;
-  /* marca de escala, nao um ponto: cresce de baixo para cima como um
-     cursor de leitura percorrendo as secoes */
-  width: 2px;
-  height: 13px;
-  border-radius: 2px;
-  background: var(--teal-500);
-  transform: translateX(-50%) scaleY(0);
-  transform-origin: center bottom;
-  transition: transform 0.34s var(--ease);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--teal-500);
+  box-shadow: 0 0 0 3px rgba(20, 214, 196, 0.16);
+  transform: translateX(-50%) scale(0.4);
+  transform-origin: center center;
+  opacity: 0;
+  transition: transform 0.34s var(--ease), opacity 0.34s var(--ease),
+              box-shadow 0.34s var(--ease);
 }
 
 .nav-list a:hover { color: #fff; background: rgba(255, 255, 255, 0.09); }
-.nav-list a.is-active::after { transform: translateX(-50%) scaleY(1); }
+.nav-list a.is-active::after {
+  transform: translateX(-50%) scale(1);
+  opacity: 1;
+  box-shadow: 0 0 0 4px rgba(20, 214, 196, 0.2), 0 0 12px rgba(20, 214, 196, 0.55);
+}
 
 .site-header.is-scrolled .nav-list a { color: var(--ink-600); }
 .site-header.is-scrolled .nav-list a:hover { color: var(--navy-900); background: rgba(7, 27, 51, 0.06); }
 .site-header.is-scrolled .nav-list a.is-active { color: var(--navy-900); font-weight: 600; }
+/* teal-500 quase some no branco: um degrau mais escuro para o header claro */
+.site-header.is-scrolled .nav-list a.is-active::after { background-color: var(--teal-600); }
 
 .nav-cta { white-space: nowrap; }
 
-/* Hambúrguer */
+/* HambÃºrguer */
 .nav-toggle {
   display: none;
+  position: relative;
+  /* o overlay do menu (.nav) cobre a tela toda e vem depois no DOM, entao
+     pinta por cima do header. Sem este z-index o botao vira invisivel
+     quando o menu abre -- e o visitante fica preso, sem como fechar. */
+  z-index: 110;
   flex-direction: column;
   justify-content: center;
   gap: 5.5px;
@@ -307,7 +320,7 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   box-shadow: 0 0 0 4px rgba(20, 214, 196, 0.18);
 }
 
-/* Composição da foto */
+/* ComposiÃ§Ã£o da foto */
 .hero-visual { display: flex; justify-content: center; }
 
 .hero-frame {
@@ -790,7 +803,7 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   margin-bottom: 1.2rem;
 }
 
-/* Seção única de tratamentos */
+/* SeÃ§Ã£o Ãºnica de tratamentos */
 .tratamentos .trat-steps { margin-top: clamp(3rem, 6vw, 4.5rem); }
 .tratamentos .trat-steps[hidden] { display: none; }
 .tratamentos [id] { scroll-margin-top: calc(var(--header-h) + 8px); }
@@ -944,6 +957,21 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   box-shadow: var(--shadow-sm);
 }
 
+/* Halo teal pulsando no item ativo: a lista de filtros precisa dizer
+   "isto aqui se clica" sem depender do mouse — no celular ninguem passa
+   o cursor. O movimento e desligado em prefers-reduced-motion (base.css). */
+.trat-tab.is-active {
+  animation: tratTabPulse 2.6s var(--ease) infinite;
+}
+
+.trat-tab.is-active:hover,
+.trat-tab.is-active:focus-visible { animation-play-state: paused; }
+
+@keyframes tratTabPulse {
+  0%, 100% { box-shadow: var(--shadow-sm), 0 0 0 0 rgba(20, 214, 196, 0.5); }
+  60%      { box-shadow: var(--shadow-sm), 0 0 0 9px rgba(20, 214, 196, 0); }
+}
+
 .trat-tab:focus-visible { outline: 2px solid var(--teal-500); outline-offset: 2px; }
 
 .proc-grid {
@@ -962,7 +990,10 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 2rem 1.6rem 1.8rem;
-  box-shadow: var(--shadow-xs);
+  /* o fio de luz no topo e o que separa o card do fundo texturizado
+     atras dele -- sem ele o branco do card e o branco do bloco viram
+     a mesma superficie. */
+  box-shadow: var(--shadow-xs), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   transition: transform 0.4s var(--ease), box-shadow 0.4s var(--ease), border-color 0.4s var(--ease);
 }
 
@@ -1027,13 +1058,16 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   border-color: rgba(20, 214, 196, 0.35);
 }
 
-/* ============================ VÍDEO ============================ */
-.video-section { padding-top: clamp(3rem, 6vw, 4.5rem); }
+/* ============================ VÃDEO ============================ */
+.video-section {
+  padding-top: clamp(2.5rem, 4.5vw, 3.5rem);
+  padding-bottom: clamp(2.5rem, 4.5vw, 3.5rem);
+}
 
 /* --- Palavras do especialista ---
-   O .cab-destaque h2 em usa um teal escuro que não contrasta sobre o
-   fundo navy desta seção, então aqui reescrevemos com as cores claras
-   que já são usadas no hero. */
+   O .cab-destaque h2 em usa um teal escuro que nÃ£o contrasta sobre o
+   fundo navy desta seÃ§Ã£o, entÃ£o aqui reescrevemos com as cores claras
+   que jÃ¡ sÃ£o usadas no hero. */
 .video-copy.cab-destaque h2 em {
   font-style: normal;
   background: linear-gradient(115deg, var(--teal-400), var(--teal-500) 45%, #6ea8ff);
@@ -1071,15 +1105,39 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   100% { transform: scale(1.85); opacity: 0; }
 }
 
+/* --- Palavras do especialista ---
+   Lado a lado: o texto ocupa a coluna da esquerda e o vÃ­deo a da
+   direita. O vÃ­deo Ã© 16:9 de verdade, entÃ£o em duas colunas ele
+   preenche o quadro sem faixas borradas nas laterais.
+   A coluna do vÃ­deo Ã© a mais larga de propÃ³sito: ele Ã© o assunto da
+   seÃ§Ã£o e precisa dominar. A do texto encolhe sÃ³ o bastante para
+   caber o tÃ­tulo em duas linhas. */
 .video-grid {
   display: grid;
-  grid-template-columns: 0.85fr 1.15fr;
-  gap: clamp(2.5rem, 5vw, 4rem);
+  grid-template-columns: 0.85fr 1.55fr;
   align-items: center;
+  gap: clamp(1.75rem, 4vw, 3.25rem);
 }
 
-.video-copy h2 { margin-bottom: 1.1rem; }
-.video-copy .lead { margin-bottom: 1.5rem; }
+.video-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.video-copy .eyebrow { justify-content: flex-start; }
+
+.video-copy h2 {
+  margin-bottom: 0;
+  max-width: 16ch;
+}
+
+.video-player {
+  width: 100%;
+  max-width: 780px;
+  justify-self: end;
+}
 
 .video-hint {
   display: inline-flex;
@@ -1097,11 +1155,16 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
 .video-frame {
   position: relative;
   aspect-ratio: 16 / 9;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   overflow: hidden;
   background: var(--navy-950);
-  border: 1px solid rgba(20, 214, 196, 0.25);
-  box-shadow: 0 40px 90px rgba(2, 10, 22, 0.6);
+  /* Anel externo suave + brilho da moldura. Sem borda dura: o traÃ§o
+     fica por conta do ::before, em degradÃª. */
+  box-shadow:
+    0 50px 110px rgba(2, 10, 22, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 0 0 1px rgba(20, 214, 196, 0.12),
+    0 0 44px rgba(20, 214, 196, 0.14);
 }
 
 .video-frame::before {
@@ -1109,7 +1172,16 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  background: linear-gradient(140deg, rgba(20, 214, 196, 0.4), transparent 40%, transparent 60%, rgba(46, 123, 232, 0.4));
+  /* TraÃ§o mais fino e mais presente: branco frio no topo (luz de cima),
+     teal Ã  esquerda e azul Ã  direita, como um vidro iluminado. */
+  background: linear-gradient(
+    140deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(20, 214, 196, 0.65) 32%,
+    rgba(20, 214, 196, 0.12) 52%,
+    rgba(46, 123, 232, 0.5) 78%,
+    rgba(120, 170, 255, 0.4) 100%
+  );
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
@@ -1213,14 +1285,18 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   color: var(--teal-300);
 }
 
+/* O botÃ£o encosta na coluna do texto, embaixo do tÃ­tulo, para fechar a
+   mesma linha de leitura: olho â†’ tÃ­tulo â†’ botÃ£o, com o vÃ­deo ao lado.
+   Centralizado no container ele ficava solto no meio, longe do texto
+   e fora do eixo do vÃ­deo. */
 .video-cta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 1.4rem;
-  margin-top: clamp(2.2rem, 4vw, 3rem);
-  text-align: center;
+  margin-top: clamp(1.5rem, 2.6vw, 2.1rem);
+  text-align: left;
 }
 
 .video-cta p {
@@ -1234,7 +1310,7 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
 .cases-carousel { position: relative; }
 
 /* Pista deslizante: 4 fotos no desktop, menos conforme a tela encolhe.
-   O scroll-snap é nativo — funciona mesmo sem JavaScript. */
+   O scroll-snap Ã© nativo â€” funciona mesmo sem JavaScript. */
 .cases-track {
   display: grid;
   grid-auto-flow: column;
@@ -1306,7 +1382,7 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
 
 .case-card:hover .case-media img { transform: scale(1.06); }
 
-/* lupa em disco de vidro no canto — visível sempre */
+/* lupa em disco de vidro no canto â€” visÃ­vel sempre */
 .case-zoom {
   position: absolute;
   top: 0.85rem;
@@ -1421,11 +1497,11 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
 
 .casos .fine-print { max-width: 72ch; }
 
-/* ============================ CONHEÇA O LOCAL ============================
-   Composição própria, diferente de "Palavras do especialista" (texto ao
-   lado do vídeo, sobre fundo escuro): aqui o vídeo vertical é encaixado
+/* ============================ CONHEÃ‡A O LOCAL ============================
+   ComposiÃ§Ã£o prÃ³pria, diferente de "Palavras do especialista" (texto ao
+   lado do vÃ­deo, sobre fundo escuro): aqui o vÃ­deo vertical Ã© encaixado
    num painel claro, saindo por cima e por baixo da borda, e o texto fica
-   à direita sobre um fundo suave em gradiente. */
+   Ã  direita sobre um fundo suave em gradiente. */
 .local {
   padding-block: clamp(4rem, 8vw, 6.5rem);
 }
@@ -1434,7 +1510,10 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: clamp(2rem, 4vw, 3.5rem);
+  /* o par video+texto fica no centro do painel: antes tudo se
+     espremia na esquerda e sobrava uma area morta a direita */
+  justify-content: center;
+  gap: clamp(2.5rem, 5vw, 4.5rem);
   align-items: center;
   padding: clamp(2rem, 4vw, 3rem);
   background: #fff;
@@ -1443,7 +1522,7 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   box-shadow: var(--shadow-sm);
 }
 
-/* faixa suave atrás do vídeo, com o lado direito em arco */
+/* faixa suave atrÃ¡s do vÃ­deo, com o lado direito em arco */
 .local-panel::before {
   content: "";
   position: absolute;
@@ -1460,16 +1539,16 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   z-index: 1;
   display: flex;
   justify-content: center;
-  /* transborda o painel em cima e embaixo — cria profundidade */
+  /* transborda o painel em cima e embaixo â€” cria profundidade */
   margin-block: -2.75rem;
 }
 
-/* O arquivo é vertical (480x854), então ele vai num quadro retrato:
-   respeita o formato original em vez de esticar em 16:9. A altura é a
-   que manda — a largura sai da proporção e nunca passa de ~315px. */
+/* O arquivo Ã© vertical (480x854), entÃ£o ele vai num quadro retrato:
+   respeita o formato original em vez de esticar em 16:9. A altura Ã© a
+   que manda â€” a largura sai da proporÃ§Ã£o e nunca passa de ~315px. */
 .local-video-frame {
   position: relative;
-  height: clamp(400px, 52vh, 500px);
+  height: clamp(500px, 64vh, 620px);
   aspect-ratio: 9 / 16;
   border-radius: var(--radius-xl);
   overflow: hidden;
@@ -1493,8 +1572,8 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   background: #000;
 }
 
-/* o botão de play já é estilizado por .video-play; aqui só ajustamos
-   o tamanho do rótulo para o quadro menor */
+/* o botÃ£o de play jÃ¡ Ã© estilizado por .video-play; aqui sÃ³ ajustamos
+   o tamanho do rÃ³tulo para o quadro menor */
 .local-video-frame .video-play { gap: 0.9rem; }
 
 .local-video-frame .video-play-label { font-size: 0.85rem; }
@@ -1502,134 +1581,354 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
 .local-copy {
   position: relative;
   z-index: 1;
-  max-width: 32rem;
+  max-width: 38rem;
 }
 
 .local-copy .section-head { margin-bottom: 0; }
 
-/* ============================ DEPOIMENTOS ============================ */
-/* Fita automática: os cards atravessam a tela da direita para a esquerda
-   sem parar. O JS clona a lista uma vez — assim -50% volta exatamente
-   ao ponto de partida e o loop não dá "pulo". */
-.dep-carousel {
-  overflow: hidden;
-  padding-block: 0.65rem;
-  margin-block: -0.65rem;
+/* ============================ DEPOIMENTOS EM VÃDEO ============================ */
+/* O padding padrÃ£o da seÃ§Ã£o Ã© folgado demais para um bloco tÃ£o alto
+   como este. Aqui ele Ã© apertado para o leque caber sem a seÃ§Ã£o
+   passar da dobra. */
+.depoimentos {
+  padding-block: clamp(2.4rem, 4vw, 3.5rem);
 }
 
-.dep-track {
-  --dep-gap: 1.5rem;
-  display: flex;
-  width: max-content;
-  animation: dep-marquee 48s linear infinite;
-  will-change: transform;
-}
-
-.dep-track > .dep-card {
-  flex: 0 0 390px;
-  margin: 0 var(--dep-gap) 0 0;
+/* Titulo desta secao e mais leve e arejado que o padrao das demais:
+   aqui o assunto e o leque de videos, e um titulo pesado competiria
+   com ele. Peso menor, tracking um pouco mais aberto e entrelinhas
+   maior. */
+.depoimentos .section-head h2 {
+  font-size: clamp(1.72rem, 3vw, 2.42rem);
+  font-weight: 600;
+  line-height: 1.24;
+  letter-spacing: -0.012em;
+  margin-bottom: 0.85rem;
 }
 
 /* Os loops decorativos do hero param quando ele sai da tela:
-   animação fora do campo de visão é render gasto à toa. */
+   animaÃ§Ã£o fora do campo de visÃ£o Ã© render gasto Ã  toa. */
 .hero.is-off .hero-blob,
 .hero.is-off .hero-ring,
 .hero.is-off .hero-card { animation-play-state: paused; }
 
-@keyframes dep-marquee {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(-50%, 0, 0); }
+/* --- Leque simetrico ---
+   Cada carta recebe a sua posicao no arco por --d: negativo a
+   esquerda, zero a da frente, positivo a direita. O arco vem de tres
+   movimentos somados (recuo, virada de lado e inclinacao), e a carta
+   da frente cresce um pouco, como na mao que abre o leque.
+
+   O JS so mexe em --d. Girar o leque e passar a carta da frente para
+   tras e trocar esse numero de lugar. */
+.vid-dep-fan {
+  --fan-janela: 2;
+  --fan-spread: clamp(5rem, 11vw, 9rem);
+  --fan-giro: 20deg;
+  --fan-inclinacao: 7deg;
+  --fan-escala: 0.1;
+  --fan-fade: 0.24;
+  --fan-centro: 0;
 }
 
-/* lê com calma: toque ou foco freiam a fita */
-.dep-carousel:focus-within .dep-track,
-.dep-carousel:active .dep-track,
-.dep-track.is-off { animation-play-state: paused; }
+.vid-dep-fan[hidden] { display: none; }
 
-/* hover só quando existe cursor de verdade. No celular o :hover gruda
-   depois do toque e a fita ficaria parada para sempre. */
-@media (hover: hover) {
-  .dep-carousel:hover .dep-track { animation-play-state: paused; }
-}
-
-/* sem movimento: a fita vira pista rolável, para ninguém perder cards */
-@media (prefers-reduced-motion: reduce) {
-  .dep-track { animation: none; }
-  .dep-carousel {
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  .dep-carousel::-webkit-scrollbar { display: none; }
-}
-
-.dep-card {
-  display: flex;
-  flex-direction: column;
-  gap: 1.1rem;
-  margin: 0;
-  padding: 2rem 1.8rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius);
-  backdrop-filter: blur(10px);
-  scroll-snap-align: start;
-  transition: transform 0.4s var(--ease), border-color 0.4s var(--ease), background 0.4s var(--ease);
-}
-
-.dep-card:hover {
-  transform: translateY(-7px);
-  border-color: rgba(20, 214, 196, 0.45);
-  background: rgba(255, 255, 255, 0.075);
-}
-
-.dep-stars {
-  color: var(--teal-400);
-  letter-spacing: 0.28em;
-  font-size: 0.98rem;
-}
-
-.dep-card blockquote {
-  font-size: 0.98rem;
-  line-height: 1.75;
-  color: var(--on-dark-soft);
-}
-
-.dep-card figcaption {
+.vid-dep-palco {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.85rem;
-  margin-top: auto;
-  padding-top: 0.5rem;
+  justify-content: center;
+  /* altura justa para a carta da frente: nem sobra vazio, nem corta
+     as cartas laterais */
+  height: clamp(288px, 22vw, 312px);
+  perspective: 1600px;
+  perspective-origin: 50% 46%;
 }
 
-.dep-avatar {
+.vid-dep {
+  position: absolute;
+  /* retrato 3:4, o formato dos depoimentos gravados no celular */
+  width: min(205px, 62vw);
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 18px 44px rgba(2, 10, 22, 0.55);
+  cursor: pointer;
+  text-align: left;
+  transform:
+    translateX(calc(var(--d, 0) * var(--fan-spread)))
+    rotateY(calc(var(--d, 0) * var(--fan-giro) * -1))
+    rotateZ(calc(var(--d, 0) * var(--fan-inclinacao)))
+    scale(calc(1 - var(--ad, 0) * var(--fan-escala)));
+  opacity: calc(1 - var(--ad, 0) * var(--fan-fade));
+  z-index: calc(60 - var(--ad, 0) * 10);
+  transition: transform 0.68s var(--ease), opacity 0.68s var(--ease),
+    box-shadow 0.4s var(--ease), border-color 0.4s var(--ease);
+  will-change: transform, opacity;
+}
+
+/* fora da janela do arco some sem transicao, para nao atravessar a tela */
+.vid-dep[data-fora="1"] {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s var(--ease);
+}
+
+.vid-dep--frente {
+  border-color: rgba(20, 214, 196, 0.5);
+  box-shadow: 0 34px 80px rgba(2, 10, 22, 0.7), 0 0 60px rgba(20, 214, 196, 0.18);
+}
+
+.vid-dep:focus-visible {
+  outline: 2px solid var(--teal-400);
+  outline-offset: 3px;
+}
+
+/* miniatura em retrato 3:4 â€” o formato dos videos gravados no celular */
+.vid-dep-mid {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background: var(--navy-950);
+}
+
+.vid-dep-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.92;
+  transition: transform 0.7s var(--ease), opacity 0.45s var(--ease);
+}
+
+/* Enquanto o video nao tem miniatura: moldura discreta do prÃ³prio
+   consultÃ³rio, sem imagem de banco nem card quebrado. */
+.vid-dep-sem-thumb {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(150deg, rgba(20, 214, 196, 0.16), transparent 55%),
+    linear-gradient(330deg, rgba(46, 123, 232, 0.18), transparent 60%),
+    var(--navy-900);
+}
+
+.vid-dep-play {
+  position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 0.85rem;
-  color: #062030;
-  background: var(--grad-accent);
+  color: #fff;
+  background: radial-gradient(circle at 50% 50%, rgba(4, 16, 31, 0.12), rgba(4, 16, 31, 0.5));
+  transition: background 0.4s var(--ease);
 }
 
-.dep-card figcaption strong {
-  display: block;
+.vid-dep-play-icone {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  padding-left: 4px;
+  border-radius: 50%;
+  color: #062030;
+  background: linear-gradient(140deg, var(--teal-400), var(--teal-500));
+  box-shadow: 0 0 0 10px rgba(20, 214, 196, 0.16), 0 0 54px rgba(20, 214, 196, 0.45);
+  transition: transform 0.4s var(--ease), box-shadow 0.4s var(--ease);
+}
+
+/* anel pulsando, o mesmo gesto do player da seÃ§Ã£o de vÃ­deo */
+.vid-dep-play-icone::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--teal-400);
+  animation: vidDepPulse 2.8s var(--ease) infinite;
+  pointer-events: none;
+}
+
+@keyframes vidDepPulse {
+  0%   { transform: scale(1); opacity: 0.75; }
+  70%  { transform: scale(1.7); opacity: 0; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+
+.vid-dep-play-texto {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.85rem;
   font-family: var(--font-display);
-  font-size: 0.93rem;
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+}
+
+/* o nome so aparece quando o paciente autoriza a publicacao */
+.vid-dep-nome {
+  display: block;
+  padding: 0.95rem 1.15rem 1.1rem;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
   color: #fff;
 }
 
-.dep-card figcaption span:not(.dep-avatar) {
-  font-size: 0.78rem;
-  color: var(--on-dark-mute);
+/* --- Setas do leque: substituidas pelos pontos do rodape --- */
+/* hover so quando existe cursor de verdade: no celular o :hover gruda
+   depois do toque e o card levantaria para sempre. */
+@media (hover: hover) {
+  .vid-dep--frente:hover {
+    transform: translateY(-6px) scale(calc(1 - var(--ad, 0) * var(--fan-escala)));
+    border-color: rgba(20, 214, 196, 0.55);
+  }
+  .vid-dep--frente:hover .vid-dep-play-icone {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 16px rgba(20, 214, 196, 0.13), 0 0 64px rgba(20, 214, 196, 0.55);
+  }
 }
+
+/* --- Rodape do leque: arco, pontos e convite --- */
+.vid-dep-rodape {
+  position: relative;
+  margin-top: clamp(0.9rem, 1.8vw, 1.5rem);
+}
+
+.vid-dep-arco {
+  display: block;
+  width: 100%;
+  height: clamp(30px, 3.6vw, 46px);
+  color: rgba(20, 214, 196, 0.34);
+  margin-bottom: -0.3rem;
+}
+
+/* Setas + lentes: juntos dizem com clareza que ali se passa de um
+   depoimento para o outro. So as lentes pareciam enfeite. */
+.vid-dep-controles {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.9rem, 2.2vw, 1.9rem);
+}
+
+.vid-dep-seta {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: clamp(40px, 4.2vw, 46px);
+  height: clamp(40px, 4.2vw, 46px);
+  padding: 0;
+  border-radius: 50%;
+  color: var(--teal-300);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(20, 214, 196, 0.32);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+  transition: background 0.35s var(--ease), border-color 0.35s var(--ease),
+    color 0.35s var(--ease), transform 0.35s var(--ease),
+    box-shadow 0.35s var(--ease);
+}
+
+.vid-dep-seta svg { width: 20px; height: 20px; }
+
+.vid-dep-seta:hover {
+  background: var(--teal-500);
+  border-color: transparent;
+  color: #062030;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(20, 214, 196, 0.28);
+}
+
+.vid-dep-seta:active { transform: translateY(0) scale(0.96); }
+
+.vid-dep-seta:focus-visible {
+  outline: 2px solid var(--teal-400);
+  outline-offset: 3px;
+}
+
+.vid-dep-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(0.5rem, 1.1vw, 0.85rem);
+}
+
+/* Indicador em forma de lente (almoeda vertical). O video da frente
+   acende em teal e cresce; os outros ficam pequenos e apagados. */
+.vid-dep-ponto {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 13px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transition: width 0.45s var(--ease), height 0.45s var(--ease);
+}
+
+.vid-dep-ponto svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.vid-dep-ponto path {
+  fill: rgba(255, 255, 255, 0.2);
+  transition: fill 0.4s var(--ease), filter 0.4s var(--ease);
+}
+
+.vid-dep-ponto:hover path { fill: rgba(20, 214, 196, 0.55); }
+
+.vid-dep-ponto:focus-visible {
+  outline: 2px solid var(--teal-400);
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+
+/* a lente da frente: maior, acesa, com halo suave */
+.vid-dep-ponto.is-ativo {
+  width: 25px;
+  height: 74px;
+}
+
+.vid-dep-ponto.is-ativo path {
+  fill: var(--teal-400);
+  filter: drop-shadow(0 0 7px rgba(20, 214, 196, 0.75)) drop-shadow(0 0 18px rgba(20, 214, 196, 0.35));
+}
+
+/* halo largo em volta da lente ativa, como na referencia */
+.vid-dep-ponto.is-ativo::before {
+  content: "";
+  position: absolute;
+  inset: -22% -46%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 50%, rgba(20, 214, 196, 0.16), transparent 68%);
+  pointer-events: none;
+}
+
+/* --- Video dentro do lightbox (o mesmo modal da galeria de fotos) --- */
+.lightbox-video {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 74vh;
+  margin-inline: auto;
+  border-radius: var(--radius);
+  background: #000;
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
+  /* contain, nunca cover: os depoimentos sao gravados no celular, na
+     vertical, e cover cortaria o rosto de quem fala. */
+  object-fit: contain;
+}
+
+.lightbox-video[hidden] { display: none; }
 
 /* ============================ FAQ ============================ */
 .faq-grid {
@@ -1641,8 +1940,8 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
 
 .faq-intro h2 { margin-bottom: 1.6rem; }
 
-/* Botão em duas linhas: a pergunta em letra miúda acima e o convite
-   principal em destaque — deixa claro qual é a ação do clique. */
+/* BotÃ£o em duas linhas: a pergunta em letra miÃºda acima e o convite
+   principal em destaque â€” deixa claro qual Ã© a aÃ§Ã£o do clique. */
 .btn-faq {
   gap: 1.1rem;
   padding: 0.95rem 1.6rem;
@@ -1829,7 +2128,7 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
   filter: saturate(0.92) contrast(1.02);
 }
 
-/* Mapa 3D — MapLibre com imagem de satélite inclinada */
+/* Mapa 3D â€” MapLibre com imagem de satÃ©lite inclinada */
 .contato-map .map-canvas {
   flex: 1;
   width: 100%;
@@ -1928,7 +2227,13 @@ body.nav-open .nav-toggle-bar:nth-child(3) { transform: translateY(-7.5px) rotat
 
 /* ============================ FOOTER ============================ */
 .site-footer {
-  background: var(--navy-950);
+  /* o rodape recebe o mesmo tratamento das secoes escuras: um halo
+     teal bem aberto no topo esquerdo, para nao terminar a pagina num
+     retangulo preto colado no cta-final. */
+  background:
+    radial-gradient(900px 380px at 18% -15%, rgba(20, 214, 196, 0.09), transparent 62%),
+    radial-gradient(700px 320px at 92% 110%, rgba(46, 123, 232, 0.07), transparent 62%),
+    var(--navy-950);
   color: var(--on-dark-mute);
   padding-top: clamp(3.5rem, 6vw, 5rem);
   border-top: 1px solid rgba(255, 255, 255, 0.07);
@@ -2106,7 +2411,8 @@ body.lightbox-open { overflow: hidden; }
 @media (max-width: 1120px) {
   .cases-track { grid-auto-columns: calc((100% - 2 * 1.4rem) / 3); }
 
-  .dep-track > .dep-card { flex-basis: 340px; }
+  /* o leque aperta o arco: menos abertura e cartas menores */
+  .vid-dep-fan { --fan-spread: clamp(3rem, 9vw, 6rem); --fan-giro: 18deg; }
 
   .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -2125,10 +2431,15 @@ body.lightbox-open { overflow: hidden; }
     inset: 0;
     z-index: -1;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 2rem;
-    padding: 6rem 2rem 3rem;
-    background: linear-gradient(165deg, var(--navy-900), var(--navy-950));
+    padding: calc(var(--header-h) + 1.6rem) 2rem calc(2rem + env(safe-area-inset-bottom, 0px));
+    /* base solida + degradê: se o var(--navy-*) faltar, o menu continua
+       opaco em vez de deixar a página aparecer por trás */
+    background-color: var(--navy-950);
+    background-image: linear-gradient(165deg, var(--navy-900), var(--navy-950));
+    overflow-y: auto;
+    overscroll-behavior: contain;
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.4s var(--ease), visibility 0.4s var(--ease);
@@ -2136,9 +2447,20 @@ body.lightbox-open { overflow: hidden; }
 
   body.nav-open .nav { opacity: 1; visibility: visible; z-index: 99; }
   body.nav-open { overflow: hidden; }
-  body.nav-open .site-header { background: transparent; box-shadow: none; }
 
-  .nav-list { flex-direction: column; gap: 0.4rem; }
+  /* backdrop-filter torna o header containing block: sem desligá-lo o
+     overlay fixed do menu fica preso na altura da barra e os itens
+     "vazam" para fora do painel, sobre a foto do hero. */
+  body.nav-open .site-header {
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  /* margin auto em vez de justify-content: center — centraliza o grupo
+     sem cortar o topo quando a lista não cabe na tela */
+  .nav-list { flex-direction: column; gap: 0.4rem; margin-block: auto; }
 
   .nav-list a {
     color: #fff !important;
@@ -2149,41 +2471,79 @@ body.lightbox-open { overflow: hidden; }
     background: transparent !important;
   }
 
-  .nav-list a::after { bottom: 0.35rem; }
+  .nav-list a::after { bottom: 0.3rem; }
 
   .nav-cta { font-size: 1rem; padding: 0.95rem 2rem; }
+
+  /* X sempre legível: com o header claro o botão e as barras escurecem,
+     e someiam sobre o painel escuro. */
+  body.nav-open .nav-toggle {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.28);
+  }
+
+  body.nav-open .nav-toggle-bar { background: #fff; }
+
+  /* o botão flutuante do chat tem z-index 250: some enquanto o menu abre */
+  body.nav-open .chat-fab { opacity: 0; pointer-events: none; }
 }
+
+/* Redundante de proposito: cobre o filtro tambem fora do bloco acima,
+   caso o .nav-open seja setado num tamanho maior. */
+body.nav-open .site-header { backdrop-filter: none; -webkit-backdrop-filter: none; }
 
 /* --- Tablet --- */
 @media (max-width: 920px) {
   :root { --header-h: calc(68px + env(safe-area-inset-top, 0px)); }
 
-  /* Hero */
+  /* Palavras do especialista — empilha no celular */
+  .video-grid { grid-template-columns: 1fr; gap: clamp(1.75rem, 4vw, 2.5rem); }
+  .video-copy { align-items: center; text-align: center; }
+  .video-copy .eyebrow { justify-content: center; }
+  .video-copy h2 { max-width: 18ch; }
+  .video-player { justify-self: center; max-width: 560px; }
+
   .container.hero-grid {
     grid-template-columns: 1fr;
     text-align: center;
-    gap: 3rem;
+    gap: clamp(1rem, 3svh, 2.5rem);
   }
 
   .hero-copy { display: flex; flex-direction: column; align-items: center; }
   .hero-sub { margin-inline: auto; }
-  .hero-actions { justify-content: center; }
+  .hero-actions { justify-content: center; gap: 0.7rem; }
   .hero-chips { justify-content: center; }
-
   .hero-visual { order: -1; }
-  .hero-frame { width: min(330px, 84vw); }
 
-  .hero-card--name { left: -4%; }
-  .hero-card--cro { right: -3%; }
-  .hero-card--insta { right: -2%; }
+  .hero {
+    min-height: 100svh;
+    padding-top: calc(var(--header-h) + clamp(0.6rem, 2svh, 2rem));
+    padding-bottom: clamp(0.9rem, 2.5svh, 3rem);
+  }
 
+  .hero-frame { width: min(300px, 32svh, 78vw); max-height: none; }
+  .hero-eyebrow { margin-bottom: clamp(0.55rem, 1.8svh, 1.4rem); }
+
+  .hero-title {
+    font-size: clamp(1.6rem, 6.4vw, 2.4rem);
+    margin-bottom: clamp(0.7rem, 2svh, 1.35rem);
+  }
+
+  .hero-sub {
+    font-size: clamp(0.95rem, 1.4vw, 1.1rem);
+    line-height: 1.62;
+    margin-bottom: clamp(0.9rem, 2.5svh, 2rem);
+  }
+
+  .hero-chips { gap: 0.5rem; }
+  .hero-chips li { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+  .hero-card--name { left: -8px; bottom: 9%; }
+  .hero-card--cro { right: -8px; top: 0; }
+  .hero-card--insta { right: -8px; bottom: 3%; }
   .hero-scroll { display: none; }
-  .hero { min-height: auto; padding-top: calc(var(--header-h) + 3rem); padding-bottom: 4rem; }
 
-  /* Sobre */
   .sobre-grid,
   .alinha-grid,
-  .video-grid,
   .faq-grid,
   .contato-grid { grid-template-columns: 1fr; }
 
@@ -2191,27 +2551,70 @@ body.lightbox-open { overflow: hidden; }
   .sobre-visual::before { inset: auto -10px -10px auto; }
   .check-list { grid-template-columns: 1fr; }
 
+  /* Sobre no celular: coluna unica centralizada, linha de leitura curta
+     e titulo com escala propria — sem o texto esticado de ponta a ponta. */
+  .sobre-copy {
+    text-align: center;
+    max-width: 34rem;
+    margin-inline: auto;
+  }
+
+  .sobre-copy .eyebrow { justify-content: center; }
+
+  .sobre-copy.cab-destaque h2 {
+    font-size: clamp(1.62rem, 6.4vw, 2.2rem);
+    line-height: 1.18;
+    margin-bottom: 1rem;
+  }
+
+  .sobre-copy .lead {
+    font-size: clamp(1rem, 3.6vw, 1.1rem);
+    line-height: 1.62;
+    max-width: 32ch;
+    margin-inline: auto;
+  }
+
+  .sobre-texto {
+    font-size: clamp(0.96rem, 3.4vw, 1.04rem);
+    line-height: 1.7;
+    max-width: 38ch;
+    margin-inline: auto;
+  }
+
+  .check-list {
+    gap: 0.95rem;
+    max-width: 22rem;
+    margin: 1.7rem auto 2.1rem;
+    text-align: left;
+  }
+
+  .check-list li { font-size: 0.97rem; }
+
+  .sobre-actions { justify-content: center; }
+
   .alinha-visual { max-width: 420px; margin-inline: auto; width: 100%; }
 
-  .video-copy { text-align: center; }
-  .video-copy .lead { margin-inline: auto; }
-
-  .faq-intro { text-align: center; }
+  /* Empilha como flex e usa display:contents no intro para tirar o botao
+     de dentro do bloco de texto e coloca-lo depois das perguntas. */
+  .faq-grid { display: flex; flex-direction: column; gap: 1.6rem; }
+  .faq-intro { display: contents; text-align: center; }
+  .faq-intro .eyebrow { order: 0; justify-content: center; }
+  .faq-intro h2 { order: 1; margin-bottom: 0; }
+  .accordion { order: 2; }
   .faq-intro .lead { margin-inline: auto; }
   .faq-intro .btn { margin-inline: auto; }
-  .faq-intro .btn-faq { text-align: center; }
-  .faq-intro .eyebrow { justify-content: center; }
+  .faq-intro .btn-faq { order: 3; text-align: center; margin-top: 0.4rem; }
 
   .contato-info { text-align: center; }
   .contato-info .eyebrow { justify-content: center; }
   .contact-list { max-width: 440px; margin-inline: auto auto; margin-bottom: 0; text-align: left; }
 
-  /* O consultório empilha: vídeo em cima, texto embaixo */
   .local-panel { grid-template-columns: 1fr; justify-items: center; text-align: center; }
   .local-video { margin-block: -3rem -1rem; }
   .local-copy { max-width: 620px; margin-inline: auto; }
   .local-copy .section-head { margin-inline: auto; }
   .local-copy .lead { margin-inline: auto; }
+
   .local-panel::before {
     inset: 0 0 auto 0;
     width: auto;
@@ -2240,16 +2643,33 @@ body.lightbox-open { overflow: hidden; }
     font-size: 0.82rem;
   }
 
-  .dep-track > .dep-card { flex-basis: clamp(260px, 82vw, 340px); }
+  .vid-dep-fan {
+    --fan-janela: 1;
+    --fan-spread: 2.2rem;
+    --fan-giro: 17deg;
+    --fan-inclinacao: 6deg;
+    --fan-escala: 0.08;
+    --fan-fade: 0.2;
+  }
 
-  .cases-track { grid-auto-columns: 76%; gap: 1rem; }
+  .vid-dep { width: min(168px, 54vw); }
+  .vid-dep-palco { height: clamp(250px, 68vw, 300px); }
+  .vid-dep-rodape { margin-top: 0.8rem; }
 
-  /* Os 5 pontos de 44px nao cabem ao lado das setas em 320px.
-     As setas ficam numa linha e os pontos ganham a linha inteira
-     (5 x 44 = 220px, sobra folgada mesmo no menor celular). */
-  .cases-controls { flex-wrap: wrap; gap: 0.35rem; }
+  .sobre-copy.cab-destaque h2 em { display: block; margin-top: 0.15em; }
 
-  .cases-dots { flex: 1 0 100%; justify-content: center; }
+  .sobre-actions { width: 100%; }
+  .sobre-actions .btn { width: 100%; max-width: 22rem; }
+
+  .cases-track {
+    grid-auto-columns: 100%;
+    gap: 1rem;
+    padding-inline: 0;
+    margin-inline: 0;
+  }
+
+  .cases-controls { flex-wrap: nowrap; gap: 0.4rem; }
+  .cases-dot { width: 32px; height: 32px; }
 
   .fine-print { font-size: 0.9rem; }
 
@@ -2276,8 +2696,8 @@ body.lightbox-open { overflow: hidden; }
   :root { --gutter: 1.1rem; }
 
   .hero-eyebrow { font-size: 0.66rem; padding: 0.45rem 0.85rem; letter-spacing: 0.1em; }
-  .hero-frame { width: min(280px, 88vw); }
-  .hero-card--cro { top: 6%; right: -2%; }
+  .hero-frame { width: min(280px, 30svh, 88vw); }
+  .hero-card--cro { top: 0; right: -8px; }
 
   .btn-lg { padding: 0.95rem 1.5rem; font-size: 0.95rem; }
   .btn { padding: 0.85rem 1.4rem; font-size: 0.92rem; }

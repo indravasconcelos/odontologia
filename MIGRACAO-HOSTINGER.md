@@ -23,6 +23,21 @@ banco e configurar o `.env`.
 - [ ] O `.htaccess` e o `.env` **subiram** — muitos clientes de FTP
       escondem arquivos que começam com ponto
 
+### Pacote pronto
+
+Na raiz do projeto há o **`public_html-hostinger.zip`** (14,4 MB), já
+montado com o que vai para o servidor:
+
+- inclui `.htaccess`, `favicon.svg`, `assets/`, `css/`, `js/`, `app/`,
+  `api/`, `auth/`, `admin/`, `database/` e as pastas `logs/` e
+  `backups/` **vazias** (só a proteção)
+- **não** inclui `_demo/`, `.git/`, o `.env` com os dados locais,
+  `database/.instalado`, nem os registros de `logs/`
+- 67 arquivos, 15,6 MB descompactado
+
+É só descompactar dentro de `public_html` no hPanel. Se enviar por FTP,
+envie os arquivos soltos em vez do zip.
+
 ---
 
 ## 1. Requisitos na Hostinger
@@ -51,7 +66,7 @@ backups/  (só o .htaccess e o .gitkeep, vazia)
 .env      (você cria lá com os dados do servidor)
 ```
 
-São **68 arquivos, cerca de 14,6 MB** — quase tudo são as fotos e o vídeo.
+São **67 arquivos, cerca de 15,6 MB** — quase tudo são as fotos e o vídeo.
 Com a pasta `_demo` seria 1,5 GB.
 
 **NÃO envie:**
@@ -97,6 +112,20 @@ cadastrar os 9 serviços e os horários de segunda a sábado.
 
 ### 3.3 Criar o usuário administrador
 
+> **A conta do servidor é nova.** O banco de produção nasce vazio: trocar a
+> senha no painel da sua máquina **não** viaja com os arquivos. Quem decide
+> o e-mail e a senha do acesso na Hostinger é o instalador, lendo o
+> `ADMIN_*` do `.env` **do servidor**.
+
+Antes de rodar o instalador, deixe o `.env` do servidor com o e-mail que
+você quer usar e uma senha nova (o mesmo e-mail que você já usa aqui):
+
+```ini
+ADMIN_NOME=Dr. Maycon Gomes
+ADMIN_EMAIL=indrasantos867@gmail.com
+ADMIN_SENHA=uma_senha_nova_e_forte
+```
+
 Use o **Terminal** do hPanel (menu *Avançado → Terminal*):
 
 ```
@@ -105,7 +134,7 @@ php database/instalar.php
 ```
 
 Isso cria as tabelas que faltarem, importa os dados iniciais e cadastra
-o administrador com os valores de `ADMIN_*` do `.env`.
+o administrador com esses valores.
 
 **Por que não pela web:** o `.htaccess` bloqueia a pasta `database/`
 com um 404 de propósito, justamente para ninguém rodar o instalador
@@ -119,8 +148,8 @@ o painel.
 
 Depois de instalar:
 
-1. Entre em `/admin`, troque a senha em **Minha conta**
-2. Apague a linha `INSTALAR_TOKEN` do `.env`
+1. Entre em `/admin` e confira que o e-mail é o certo
+2. Apague as linhas `ADMIN_SENHA` e `INSTALAR_TOKEN` do `.env`
 3. Apague o arquivo `database/instalar.php` do servidor
 
 O arquivo `database/.instalado` também impede que o instalador volte a
@@ -221,7 +250,8 @@ no topo do painel, ainda não está pronto.**
 - [ ] `database/.instalado` **não** foi enviado
 - [ ] `database/instalar.php` apagado do servidor
 - [ ] `INSTALAR_TOKEN` removido do `.env`
-- [ ] Senha do administrador trocada
+- [ ] `ADMIN_SENHA` removida do `.env`
+- [ ] Login do painel testado com a senha definida no `.env` do servidor
 - [ ] HTTPS ativo (sem aviso amarelo no painel)
 - [ ] `_demo/` **não** foi enviado
 - [ ] `.htaccess` e `.env` chegaram ao servidor (FTP esconde arquivos com ponto)

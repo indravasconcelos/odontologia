@@ -144,14 +144,15 @@
     return el;
   }
 
-  /* Tempo que os pontinhos ficam na tela. Resposta curta é rápida,
-     resposta longa leva mais tempo — como quem realmente está
-     escrevendo. Sem isso o chat responde em 100ms e parece robô. */
-  var MIN_DIGITANDO = 900;
-  var MAX_DIGITANDO = 3200;
+  /* Tempo que os pontinhos ficam na tela. A API do agente leva de 2 a
+     4 segundos; como isso ja parece digitação, o tempo extra aqui é
+     curto — no maximo meio segundo. Antes os pontinhos somavam ate
+     3,2s por cima, e a resposta saia lenta mesmo com a API rapida. */
+  var MIN_DIGITANDO = 300;
+  var MAX_DIGITANDO = 600;
 
   function esperaNatural(resposta, inicio) {
-    var alvo = MIN_DIGITANDO + String(resposta).length * 18;
+    var alvo = MIN_DIGITANDO + String(resposta).length * 2;
     if (alvo > MAX_DIGITANDO) {
       alvo = MAX_DIGITANDO;
     }
@@ -251,7 +252,7 @@
 
         if (motivo === 'sem_servidor') {
           adicionar('Esse chat precisa do site aberto pelo servidor, e não pelo arquivo direto. '
-            + 'Abra http://localhost:8080 no navegador e recarregue a página.', 'erro');
+            + 'Abra ' + window.location.origin + ' no navegador e recarregue a página.', 'erro');
           return;
         }
 
@@ -287,8 +288,9 @@
             var resposta = dados.resposta || '';
 
             // o atalho do WhatsApp aparece quando a assistente entrega o
-            // número: faz sentido abrir a conversa direto, sem copiar
-            var encaminha = /Prefiro te encaminhar|encaminhar para o Dr\. Maycon|falar direto|\(69\) 99988-0560/i.test(resposta);
+            // número ou aponta o WhatsApp como caminho — no encaminhamento,
+            // no resumo do agendamento e no pedido de remarcar/cancelar.
+            var encaminha = /Prefiro te encaminhar|encaminhar para o Dr\. Maycon|falar direto|\(69\) 99988-0560|no WhatsApp|falar com o Dr\. Maycon/i.test(resposta);
 
             adicionar(resposta, 'agente', { whatsapp: encaminha });
 

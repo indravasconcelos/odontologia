@@ -1,15 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0A2540"/>
+      <stop offset="0" stop-color="#0E3358"/>
       <stop offset="1" stop-color="#050F1E"/>
     </linearGradient>
+    <radialGradient id="glow" cx="0.82" cy="0.9" r="0.85">
+      <stop offset="0" stop-color="#14D6C4" stop-opacity=".42"/>
+      <stop offset="1" stop-color="#14D6C4" stop-opacity="0"/>
+    </radialGradient>
     <linearGradient id="t" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#14D6C4"/>
-      <stop offset="1" stop-color="#3EE6D6"/>
+      <stop offset="0" stop-color="#8CF3E7"/>
+      <stop offset=".55" stop-color="#3EE6D6"/>
+      <stop offset="1" stop-color="#2E7BE8"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="15" fill="url(#g)"/>
-  <rect x="2.5" y="2.5" width="59" height="59" rx="13" fill="none" stroke="url(#t)" stroke-opacity=".55" stroke-width="1.5"/>
-  <text x="32" y="41" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="url(#t)" letter-spacing="1">MG</text>
+  <rect width="64" height="64" rx="16" fill="url(#g)"/>
+  <rect width="64" height="64" rx="16" fill="url(#glow)"/>
+  <rect x="2" y="2" width="60" height="60" rx="14.5" fill="none" stroke="url(#t)" stroke-opacity=".32" stroke-width="1.1"/>
+  <g fill="none" stroke="url(#t)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M13.5 44V20l8.1 12.6L29.7 20v24"/>
+    <path d="M48.7 26.3A8 8 0 1 0 51 32h-8"/>
+  </g>
 </svg>

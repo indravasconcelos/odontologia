@@ -28,9 +28,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/base.css">
-  <link rel="stylesheet" href="css/styles.css">
-  <link rel="stylesheet" href="css/chat.css">
+  <link rel="stylesheet" href="css/base.css?v=nav4">
+  <link rel="stylesheet" href="css/styles.css?v=nav5">
+  <link rel="stylesheet" href="css/chat.css?v=nav4">
 
   <script>
     /* Fallback global de imagens: arquivo ausente -> placeholder local elegante */
@@ -72,7 +72,7 @@
   <header class="site-header" id="topo">
     <div class="container header-inner">
       <a class="brand" href="#inicio" aria-label="Dr. Maycon Gomes — ir para o início">
-          <span class="brand-mark brand-mark--logo" aria-hidden="true"><img src="assets/logo.jpg" alt=""></span>
+          <span class="brand-mark brand-mark--logo" aria-hidden="true"><img src="assets/logo.svg" alt="" width="46" height="46"></span>
         <span class="brand-text">
           <strong>Dr. Maycon Gomes</strong>
           <small>Ortodontia / Clínico Geral</small>
@@ -84,6 +84,7 @@
           <li><a href="#inicio">Início</a></li>
           <li><a href="#tratamentos">Tratamentos</a></li>
           <li><a href="#casos">Antes e Depois</a></li>
+          <li><a href="#depoimentos">Depoimentos</a></li>
           <li><a href="#faq">Dúvidas</a></li>
           <li><a href="#contato">Localização</a></li>
         </ul>
@@ -440,7 +441,7 @@
           <div class="local-copy">
             <div class="section-head">
               <p class="eyebrow">O consultório</p>
-              <h2>Conheça o local de atendimento.</h2>
+              <h2>É aqui que a gente cuida do seu sorriso.</h2>
               <p class="lead">
                 Um ambiente organizado e acolhedor.
               </p>
@@ -450,70 +451,47 @@
       </div>
     </section>
 
-    <!-- ============================ DEPOIMENTOS ============================ -->
+    <!-- ============================ DEPOIMENTOS EM VÍDEO ============================
+         Leque simetrico. As cartas sao desenhadas pelo main.js a partir
+         do registro DEPOIMENTOS_VIDEO (js/main.js). Os pontos do rodape
+         giram o leque: o video da frente vai para tras. Sem nenhum
+         video cadastrado as cartas ficam como lugares vagos — nenhum
+         depoimento ficticio e nenhuma foto de banco. -->
     <section class="section dark depoimentos" id="depoimentos">
       <div class="container">
-        <div class="section-head section-head--center">
+        <div class="section-head section-head--center cab-destaque">
           <p class="eyebrow eyebrow--light reveal">Depoimentos</p>
-          <h2 class="reveal" data-delay="1">O que dizem sobre o atendimento.</h2>
+          <h2 class="reveal" data-delay="1">Sorrisos reais, <em>relatos reais.</em></h2>
         </div>
       </div>
 
-      <div class="dep-carousel reveal" data-delay="2">
-        <div class="dep-track" id="depoimentos-track" role="group" aria-label="Depoimentos de pacientes" tabindex="0">
-          <figure class="dep-card">
-            <div class="dep-stars" aria-label="5 de 5 estrelas">★★★★★</div>
-            <blockquote>Cada etapa explicada com calma. Soube exatamente o que esperar.</blockquote>
-            <figcaption>
-              <span class="dep-avatar" aria-hidden="true">MF</span>
-              <div><strong>Mariana Ferreira</strong><span>Paciente de alinhadores invisíveis</span></div>
-            </figcaption>
-          </figure>
+      <div class="container">
+        <div class="vid-dep-fan" id="depoimentos-video">
+          <div class="vid-dep-palco" id="depoimentos-palco"></div>
 
-          <figure class="dep-card">
-            <div class="dep-stars" aria-label="5 de 5 estrelas">★★★★★</div>
-            <blockquote>Um plano feito para o meu caso e retornos sempre como combinado.</blockquote>
-            <figcaption>
-              <span class="dep-avatar" aria-hidden="true">RA</span>
-              <div><strong>Rafael Andrade</strong><span>Paciente de aparelho fixo</span></div>
-            </figcaption>
-          </figure>
+          <div class="vid-dep-rodape">
+            <svg class="vid-dep-arco" viewBox="0 0 1200 70" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+              <path d="M0 68 Q 600 -26 1200 68" fill="none" stroke="currentColor" stroke-width="1" />
+            </svg>
 
-          <figure class="dep-card">
-            <div class="dep-stars" aria-label="5 de 5 estrelas">★★★★★</div>
-            <blockquote>Ambiente organizado e atendimento humano. Hoje consigo sorrir sem pensar duas vezes.</blockquote>
-            <figcaption>
-              <span class="dep-avatar" aria-hidden="true">JP</span>
-              <div><strong>Juliana Prado</strong><span>Paciente de implante dentário</span></div>
-            </figcaption>
-          </figure>
+            <div class="vid-dep-controles">
+              <button class="vid-dep-seta" type="button" data-viddep="prev" aria-label="Ver depoimento anterior">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="m15 18-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
 
-          <figure class="dep-card">
-            <div class="dep-stars" aria-label="5 de 5 estrelas">★★★★★</div>
-            <blockquote>Cheguei com muitas dúvidas e saí com tudo explicado, sem pressa.</blockquote>
-            <figcaption>
-              <span class="dep-avatar" aria-hidden="true">CS</span>
-              <div><strong>Camila Souza</strong><span>Paciente de clareamento dental</span></div>
-            </figcaption>
-          </figure>
+              <div class="vid-dep-nav" id="depoimentos-nav" role="group" aria-label="Escolher depoimento"></div>
 
-          <figure class="dep-card">
-            <div class="dep-stars" aria-label="5 de 5 estrelas">★★★★★</div>
-            <blockquote>Fui avisado de cada etapa e o tratamento aconteceu do jeito que combinamos.</blockquote>
-            <figcaption>
-              <span class="dep-avatar" aria-hidden="true">DM</span>
-              <div><strong>Diego Martins</strong><span>Paciente de endodontia</span></div>
-            </figcaption>
-          </figure>
-
-          <figure class="dep-card">
-            <div class="dep-stars" aria-label="5 de 5 estrelas">★★★★★</div>
-            <blockquote>Ambiente tranquilo e cuidado em cada detalhe. Faço as revisões aqui sem receio.</blockquote>
-            <figcaption>
-              <span class="dep-avatar" aria-hidden="true">BA</span>
-              <div><strong>Beatriz Almeida</strong><span>Paciente de profilaxia</span></div>
-            </figcaption>
-          </figure>
+              <button class="vid-dep-seta" type="button" data-viddep="next" aria-label="Ver próximo depoimento">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="m9 18 6-6-6-6" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -620,7 +598,7 @@
       <div class="container contato-grid">
         <div class="contato-info">
           <p class="eyebrow reveal">Localização</p>
-          <h2 class="reveal" data-delay="1">É aqui que a gente cuida do seu sorriso.</h2>
+          <h2 class="reveal" data-delay="1">Onde estamos.</h2>
 
           <ul class="contact-list reveal" data-delay="2">
             <li>
@@ -678,7 +656,7 @@
     <div class="container footer-grid">
       <div class="footer-brand">
         <a class="brand brand--footer" href="#inicio">
-        <span class="brand-mark brand-mark--logo" aria-hidden="true"><img src="assets/logo.jpg" alt=""></span>
+        <span class="brand-mark brand-mark--logo" aria-hidden="true"><img src="assets/logo.svg" alt=""></span>
           <span class="brand-text">
             <strong>Dr. Maycon Gomes</strong>
             <small>Ortodontia / Clínico Geral · CRO/RO 3795</small>
@@ -730,10 +708,12 @@
   </footer>
 
   <!-- ============================ LIGHTBOX ============================ -->
-  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Visualização de imagens" hidden>
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Visualização de imagem ou vídeo" hidden>
     <div class="lightbox-backdrop" data-lb-close></div>
     <figure class="lightbox-figure">
       <img class="lightbox-img" src="" alt="">
+      <!-- usado pelos depoimentos em video; oculto na galeria de fotos -->
+      <video class="lightbox-video" controls playsinline preload="metadata" hidden></video>
       <figcaption class="lightbox-caption"></figcaption>
     </figure>
     <button class="lb-btn lb-close" type="button" data-lb-close aria-label="Fechar visualização">

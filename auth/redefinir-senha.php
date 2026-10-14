@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $dados !== null) {
   <main class="adm-login">
     <div class="adm-login-card">
       <a class="adm-login-marca" href="<?= Helpers::baseUrl() ?>/">
-        <span class="adm-logo" aria-hidden="true"><img src="<?= Helpers::baseUrl() ?>/assets/logo.jpg" alt=""></span>
+        <span class="adm-logo" aria-hidden="true"><img src="<?= Helpers::baseUrl() ?>/assets/logo.svg" alt=""></span>
         <span>
           <strong>Dr. Maycon Gomes</strong>
           <small>Ortodontia / Clínico Geral · CRO/RO 3795</small>

@@ -14,6 +14,7 @@ require_once dirname(__DIR__) . '/app/ia/Prompt.php';
 require_once dirname(__DIR__) . '/app/ia/Tools.php';
 require_once dirname(__DIR__) . '/app/ia/AgenteLog.php';
 require_once dirname(__DIR__) . '/app/ia/DeepSeek.php';
+require_once dirname(__DIR__) . '/app/ia/Gemini.php';
 require_once dirname(__DIR__) . '/app/ia/Fallback.php';
 require_once dirname(__DIR__) . '/app/ia/ChatService.php';
 

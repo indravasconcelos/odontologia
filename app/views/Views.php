@@ -8,6 +8,36 @@ declare(strict_types=1);
 
 final class Views
 {
+    /** Ícones em traço do painel (24x24, mesmo desenho do site). */
+    private const ICONES = [
+        'calendario' => '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/>',
+        'esquerda'   => '<path d="m15 18-6-6 6-6"/>',
+        'direita'    => '<path d="m9 18 6-6-6-6"/>',
+        'relogio'    => '<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/>',
+        'pessoa'     => '<circle cx="12" cy="8" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
+        'usuarios'   => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+        'check'      => '<path d="M20 6 9 17l-5-5"/>',
+        'check-circ' => '<circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>',
+        'telefone'   => '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/>',
+        'busca'      => '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>',
+        'lapis'      => '<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+        'lixeira'    => '<path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l.9 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.5 7"/>',
+        'mais'       => '<path d="M12 5v14M5 12h14"/>',
+        'vazio'      => '<rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 13h4l1.5 2.5h7L17 13h4"/>',
+        'ajuda'      => '<circle cx="12" cy="12" r="9"/><path d="M9.8 9.3a2.3 2.3 0 1 1 3.3 2.1c-.7.3-1.1.9-1.1 1.6v.5"/><path d="M12 17h.01"/>',
+        'alerta'     => '<path d="M12 9.5V14M12 17.5h.01"/><path d="M10.3 3.9 2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>',
+    ];
+
+    /** Desenha um ícone do painel. */
+    public static function icone(string $nome, int $tamanho = 16): string
+    {
+        $desenho = self::ICONES[$nome] ?? '';
+
+        return '<svg viewBox="0 0 24 24" width="' . $tamanho . '" height="' . $tamanho . '" fill="none"'
+            . ' stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"'
+            . ' aria-hidden="true" focusable="false">' . $desenho . '</svg>';
+    }
+
     /** senha padrao ainda no ar: some quando a senha for trocada */
     public static function senhaPadraoAtiva(): bool
     {
@@ -88,7 +118,7 @@ final class Views
   <header class="adm-topo">
     <div class="adm-topo-inner">
       <a class="adm-marca" href="<?= Helpers::baseUrl() ?>/admin/">
-        <span class="adm-logo" aria-hidden="true"><img src="<?= Helpers::baseUrl() ?>/assets/logo.jpg" alt=""></span>
+        <span class="adm-logo" aria-hidden="true"><img src="<?= Helpers::baseUrl() ?>/assets/logo.svg" alt=""></span>
         <span>
           <strong>Dr. Maycon Gomes</strong>
           <small>Painel da agenda</small>

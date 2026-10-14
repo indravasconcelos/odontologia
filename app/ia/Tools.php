@@ -45,7 +45,7 @@ final class Tools
                         'type' => 'object',
                         'properties' => [
                             'nome' => ['type' => 'string', 'description' => 'Nome do paciente'],
-                            'telefone' => ['type' => 'string', 'description' => 'Telefone, se o visitante informar'],
+                            'telefone' => ['type' => 'string', 'description' => 'Telefone do paciente com DDD. Obrigatório: sem ele o Dr. Maycon não consegue confirmar a consulta pelo WhatsApp.'],
                             'data' => ['type' => 'string', 'description' => 'Data no formato AAAA-MM-DD'],
                             'hora' => ['type' => 'string', 'description' => 'Horário no formato HH:MM'],
                         ],
@@ -107,9 +107,41 @@ final class Tools
 
     private static function disponibilidade(array $args, array &$estado): array
     {
-        $data = self::normalizarData((string) ($args['data'] ?? ''));
+        $bruto = trim((string) ($args['data'] ?? ''));
+        $data = self::normalizarData($bruto);
+
         if ($data === null) {
-            return ['ok' => false, 'texto' => 'Data inválida. Pergunte o dia ao visitante.'];
+            return [
+                'ok' => false,
+                'texto' => 'Não deu para entender a data informada ("' . $bruto . '"). Datas válidas vão de '
+                    . date('Y-m-d') . ' até '
+                    . date('Y-m-d', strtotime('+' . Env::int('AGENDA_DIAS_A_FUTURO', 60) . ' days')) . '.',
+                'dados' => ['data' => '', 'slots' => []],
+            ];
+        }
+
+        // Data fora da janela: o modelo chuta datas o tempo todo e, sem
+        // esta checagem, a agenda devolvia "sem horários" para um dia
+        // que nem existia no cálculo.
+        $hoje = date('Y-m-d');
+        $ultimo = date('Y-m-d', strtotime('+' . Env::int('AGENDA_DIAS_A_FUTURO', 60) . ' days'));
+
+        if ($data < $hoje) {
+            return [
+                'ok' => false,
+                'texto' => 'A data ' . Helpers::dataExtenso($data) . ' (' . $data . ') já passou. '
+                    . 'Hoje é ' . $hoje . '. A agenda só vai até ' . $ultimo . '.',
+                'dados' => ['data' => $data, 'slots' => []],
+            ];
+        }
+
+        if ($data > $ultimo) {
+            return [
+                'ok' => false,
+                'texto' => 'A data ' . Helpers::dataExtenso($data) . ' (' . $data . ') está longe demais. '
+                    . 'Hoje é ' . $hoje . ' e a agenda só vai até ' . $ultimo . '.',
+                'dados' => ['data' => $data, 'slots' => []],
+            ];
         }
 
         $servico = self::servicoAvaliacao();
@@ -126,7 +158,7 @@ final class Tools
             $estado['slots'] = [];
             return [
                 'ok' => false,
-                'texto' => 'Não há atendimento neste dia. Escolha outro dia.',
+                'texto' => 'O consultório não atende em ' . Helpers::dataExtenso($data) . '.',
                 'dados' => ['data' => $data, 'slots' => []],
             ];
         }
@@ -135,7 +167,7 @@ final class Tools
             $estado['slots'] = [];
             return [
                 'ok' => false,
-                'texto' => 'Este dia está sem horários livres. Ofereça outro dia ao visitante.',
+                'texto' => 'A agenda está completa em ' . Helpers::dataExtenso($data) . '.',
                 'dados' => ['data' => $data, 'slots' => []],
             ];
         }
@@ -149,7 +181,7 @@ final class Tools
         $estado['slots'] = $d['slots'];
 
         $diaTexto = Helpers::dataExtenso($data);
-        $texto = 'Horários livres em ' . $diaTexto . ' para ' . $servico['nome'] . ': ' . $lista . '.';
+        $texto = 'Horários livres em ' . $diaTexto . ' (' . $data . ') para ' . $servico['nome'] . ': ' . $lista . '.';
 
         return [
             'ok' => true,
@@ -165,13 +197,16 @@ final class Tools
         $hora = self::normalizarHora((string) ($args['hora'] ?? ''));
 
         if (mb_strlen($nome) < 2) {
-            return ['ok' => false, 'texto' => 'Falta o nome do paciente.'];
+            return ['ok' => false, 'texto' => 'Agendamento não criado: falta o nome do paciente.'];
+        }
+        if (!self::nomePlausivel($nome)) {
+            return ['ok' => false, 'texto' => 'Agendamento não criado: "' . $nome . '" não parece um nome de paciente.'];
         }
         if ($data === null) {
-            return ['ok' => false, 'texto' => 'Data inválida.'];
+            return ['ok' => false, 'texto' => 'Agendamento não criado: a data informada não existe.'];
         }
         if ($hora === null) {
-            return ['ok' => false, 'texto' => 'Horário inválido.'];
+            return ['ok' => false, 'texto' => 'Agendamento não criado: o horário "' . trim((string) ($args['hora'] ?? '')) . '" não existe.'];
         }
 
         // o horario precisa ter vindo da consulta real, nao da conversa
@@ -181,7 +216,8 @@ final class Tools
         if ($slots === [] || !in_array($chave, $slots, true)) {
             return [
                 'ok' => false,
-                'texto' => 'Esse horário não está mais livre. Chame consultar_disponibilidade e ofereça outro.',
+                'texto' => 'Agendamento não criado: ' . $hora . ' não está entre os horários livres de '
+                    . Helpers::dataExtenso((string) ($estado['data'] ?? $data)) . '.',
             ];
         }
 
@@ -195,22 +231,32 @@ final class Tools
         }
 
         if ($servicoId <= 0) {
-            return ['ok' => false, 'texto' => 'Serviço não encontrado.'];
+            return ['ok' => false, 'texto' => 'Agendamento não criado: serviço de avaliação não encontrado.'];
         }
 
         $servico = Agenda::servico($servicoId);
         if ($servico === null) {
-            return ['ok' => false, 'texto' => 'Serviço não encontrado.'];
+            return ['ok' => false, 'texto' => 'Agendamento não criado: serviço de avaliação não encontrado.'];
         }
 
         $telefone = trim((string) ($args['telefone'] ?? ''));
+
+        // sem telefone a consulta fica sem confirmação: o Dr. Maycon
+        // precisa do número com DDD para chamar no WhatsApp.
+        if ($telefone === '') {
+            return [
+                'ok' => false,
+                'texto' => 'Agendamento não criado: falta o telefone do paciente com DDD. '
+                    . 'A confirmação da consulta é feita pelo WhatsApp.',
+            ];
+        }
 
         $resultado = Agenda::criar(
             nomePaciente: $nome,
             servicoId: (int) $servico['id'],
             dataIso: $data,
             horaInicio: $chave,
-            telefone: $telefone !== '' ? $telefone : null,
+            telefone: $telefone,
             origem: 'ia'
         );
 
@@ -234,13 +280,13 @@ final class Tools
         $nome = trim((string) ($args['nome'] ?? ''));
 
         if (mb_strlen($nome) < 2) {
-            return ['ok' => false, 'texto' => 'Preciso do nome para localizar o agendamento.'];
+            return ['ok' => false, 'texto' => 'Cancelamento não feito: falta o nome do paciente.'];
         }
 
         $ag = Agenda::proximoDoPaciente($nome);
 
         if ($ag === null) {
-            return ['ok' => false, 'texto' => 'Não encontrei agendamento ativo para ' . $nome . '.'];
+            return ['ok' => false, 'texto' => 'Nenhum agendamento ativo encontrado para ' . $nome . '.'];
         }
 
         $resultado = Agenda::cancelar((int) $ag['id']);
@@ -264,16 +310,16 @@ final class Tools
         $hora = self::normalizarHora((string) ($args['hora'] ?? ''));
 
         if (mb_strlen($nome) < 2) {
-            return ['ok' => false, 'texto' => 'Preciso do nome para localizar o agendamento.'];
+            return ['ok' => false, 'texto' => 'Remarcação não feita: falta o nome do paciente.'];
         }
         if ($data === null || $hora === null) {
-            return ['ok' => false, 'texto' => 'Nova data ou horário inválido.'];
+            return ['ok' => false, 'texto' => 'Remarcação não feita: a nova data ou o novo horário não existe.'];
         }
 
         $ag = Agenda::proximoDoPaciente($nome);
 
         if ($ag === null) {
-            return ['ok' => false, 'texto' => 'Não encontrei agendamento ativo para ' . $nome . '.'];
+            return ['ok' => false, 'texto' => 'Nenhum agendamento ativo encontrado para ' . $nome . '.'];
         }
 
         $resultado = Agenda::remarcar((int) $ag['id'], $data, $hora . ':00');
@@ -300,7 +346,7 @@ final class Tools
 
             return [
                 'ok'    => false,
-                'texto' => 'Você já tem outro horário marcado nessa data. Me diga qual deles deve mudar.',
+                'texto' => 'Remarcação desfeita: ' . $nome . ' já tem outro agendamento em ' . Helpers::dataExtenso($data) . '.',
             ];
         }
 
@@ -323,6 +369,23 @@ final class Tools
         }
 
         return ['id' => 1, 'nome' => 'Avaliação', 'duracao_minutos' => 30, 'ativo' => 1];
+    }
+
+    /**
+     * Filtro contra nome-sujeito: quando o visitante responde "Legal, então
+     * pode marcar", a frase inteira chega como nome e vira paciente na
+     * agenda. Nome de gente não tem dígito nem pontuação de frase e cabe
+     * em poucas palavras.
+     */
+    private static function nomePlausivel(string $nome): bool
+    {
+        if (preg_match('/[0-9@\/\\\\<>|"\'#$%*+=`~,;:!?()\[\]{}]/u', $nome) === 1) {
+            return false;
+        }
+
+        $palavras = preg_split('/\s+/', trim($nome)) ?: [];
+
+        return $palavras !== [] && count($palavras) <= 6;
     }
 
     /** aceita 2026-10-15, 15/10/2026 e "sexta" não entra aqui */
